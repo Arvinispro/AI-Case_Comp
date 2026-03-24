@@ -46,8 +46,11 @@
         const form = document.getElementById("login-form");
         const statusEl = document.getElementById("form-status");
 
-        form.addEventListener("submit", (e) => {
+        form.addEventListener("submit", async (e) => {
             e.preventDefault();
+            statusEl.style.color = "#cc3333";
+            statusEl.textContent = "";
+
             const email = document.getElementById("email").value.trim();
             const password = document.getElementById("password").value;
 
@@ -56,10 +59,40 @@
                 return;
             }
 
-            // Store intent for when backend is wired up
-            sessionStorage.setItem("pending_login", JSON.stringify({ email }));
-            statusEl.style.color = "#2a7a2a";
-            statusEl.textContent = "Details saved! Backend integration coming soon.";
+            statusEl.style.color = "#555";
+            statusEl.textContent = "Logging in…";
+
+            try {
+                const res = await fetch("/api/v1/auth/sign_in", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    statusEl.style.color = "#cc3333";
+                    statusEl.textContent = data.message || "Log in failed. Please try again.";
+                    return;
+                }
+
+                if (data.data?.access_token) {
+                    localStorage.setItem("auth_token", data.data.access_token);
+                }
+                if (data.data?.refresh_token) {
+                    localStorage.setItem("refresh_token", data.data.refresh_token);
+                }
+
+                statusEl.style.color = "#2a7a2a";
+                statusEl.textContent = "Logged in! Redirecting to your account…";
+                setTimeout(() => {
+                    window.location.href = "/account";
+                }, 800);
+            } catch {
+                statusEl.style.color = "#cc3333";
+                statusEl.textContent = "Network error. Is the server running at localhost:8000?";
+            }
         });
     </script>
 </body>

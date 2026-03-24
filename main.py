@@ -3,12 +3,13 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.exceptions import AppError
 from app.models import ErrorDetail
+from app.routers.accountpage import router as account_router
 from app.routers.auth import router as auth_router
 
 settings = get_settings()
@@ -20,19 +21,9 @@ app = FastAPI(
 )
 
 
-@app.get("/sign-up", include_in_schema=False)
-def sign_up_page() -> FileResponse:
-    return FileResponse(BASE_DIR / "app" / "static" / "sign-up.html")
-
-
-@app.get("/sign-in", include_in_schema=False)
-def sign_in_page() -> FileResponse:
-    return FileResponse(BASE_DIR / "app" / "static" / "sign-in.html")
-
-
-@app.get("/account", include_in_schema=False)
-def account_page() -> FileResponse:
-    return FileResponse(BASE_DIR / "app" / "static" / "account.html")
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/frontend/menu/menu.html")
 
 
 @app.get("/health")
@@ -41,6 +32,9 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(account_router)
+
+app.mount("/frontend", StaticFiles(directory=BASE_DIR / "frontend"), name="frontend")
 
 
 def _first_validation_message(errors: list[dict]) -> str:

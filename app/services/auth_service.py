@@ -46,7 +46,6 @@ class AuthService:
 
         if profile_obj is None:
             return UserProfile(id=user_id)
-        print(profile_obj.get("points"))
         return UserProfile(
             id=str(profile_obj.get("id", user_id)),
             username=profile_obj.get("username"),
@@ -174,5 +173,4 @@ class AuthService:
             raise AuthServiceError(401, "INVALID_TOKEN", "Invalid or expired token")
 
         profile = self._get_profile(str(user.id))
-        print(profile)
         return self._serialize_profile(user, profile)

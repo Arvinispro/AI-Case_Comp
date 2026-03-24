@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/frontend/account/accountpage.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <main class="main-content">
+            <div class="profile-card">
+                <!--Add in this for image later: <div class="avatar-box"> <img src="images/profile.png" alt="Profile picture"></div>-->
+                <div class="avatar-box"></div>
+
+                <div class="user-info">
+                    <div class="info-row name-row">
+                        <span class="info-label">Name</span>
+                        <span class="info-value">Player 1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Level</span>
+                        <span class="info-value">1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Points</span>
+                        <span class="info-value">1</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-icon" id="menuIcon" aria-label="Open menu" role="button" tabindex="0">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <div class="dropdown-menu" id="menu">
+                <a href="#">Profile</a>
+                <a href="#">Settings</a>
+                <a href="#">Logout</a>
+            </div>
+
+            <div class="modes-container">
+                <div class="mode-item">
+                    <a href="/study-upload" class="mode-box">Study</a>
+                    <p class="mode-text">
+                        Enter a focused learning mode where you can review materials, build knowledge,
+                        and move through your study journey at your own pace.
+                    </p>
+                </div>
+
+                <div class="mode-item">
+                    <a href="/practice-upload" class="mode-box">Practice</a>
+                    <p class="mode-text">
+                        Test what you know with engaging challenges, strengthen your memory,
+                        and improve your skills through repeated practice.
+                    </p>
+                </div>
+            </div>
+        </main>
+
+        <aside class="ranking-sidebar">
+            <h2 class="ranking-title">Ranking</h2>
+
+            <div class="ranking-list">
+                <div class="rank-item">
+                    <span class="rank-number">1</span>
+                    <span class="rank-name">Arthur</span>
+                    <span class="rank-level">Lv. 20</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">2</span>
+                    <span class="rank-name">Luna</span>
+                    <span class="rank-level">Lv. 18</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">3</span>
+                    <span class="rank-name">Elio</span>
+                    <span class="rank-level">Lv. 17</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">4</span>
+                    <span class="rank-name">Mira</span>
+                    <span class="rank-level">Lv. 16</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">5</span>
+                    <span class="rank-name">Rowan</span>
+                    <span class="rank-level">Lv. 15</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">6</span>
+                    <span class="rank-name">Nia</span>
+                    <span class="rank-level">Lv. 14</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">7</span>
+                    <span class="rank-name">Cedric</span>
+                    <span class="rank-level">Lv. 13</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">8</span>
+                    <span class="rank-name">Iris</span>
+                    <span class="rank-level">Lv. 12</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">9</span>
+                    <span class="rank-name">Kai</span>
+                    <span class="rank-level">Lv. 11</span>
+                </div>
+                <div class="rank-item">
+                    <span class="rank-number">10</span>
+                    <span class="rank-name">Selene</span>
+                    <span class="rank-level">Lv. 10</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        const menuIcon = document.getElementById("menuIcon");
+        const menu = document.getElementById("menu");
+
+        menuIcon.addEventListener("click", function () {
+            if (menu.style.display === "flex") {
+                menu.style.display = "none";
+            } else {
+                menu.style.display = "flex";
+            }
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!menuIcon.contains(e.target) && !menu.contains(e.target)) {
+                menu.style.display = "none";
+            }
+        });
+    </script>
+</body>
+
+</html>

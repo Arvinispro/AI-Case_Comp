@@ -46,8 +46,8 @@
 
           <div class="input-group full-width">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="At least 8 characters" required
-              minlength="8" />
+            <input type="password" id="password" name="password" placeholder="Min 8 chars, upper, lower &amp; number"
+              required minlength="8" />
           </div>
 
           <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
@@ -62,8 +62,11 @@
     const form = document.getElementById("signup-form");
     const statusEl = document.getElementById("form-status");
 
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      statusEl.style.color = "#cc3333";
+      statusEl.textContent = "";
+
       const firstName = document.getElementById("first-name").value.trim();
       const lastName = document.getElementById("last-name").value.trim();
       const email = document.getElementById("email").value.trim();
@@ -79,9 +82,40 @@
         return;
       }
 
-      sessionStorage.setItem("pending_signup", JSON.stringify({ firstName, lastName, email, username }));
-      statusEl.style.color = "#2a7a2a";
-      statusEl.textContent = "Details saved! Backend integration coming soon.";
+      statusEl.style.color = "#555";
+      statusEl.textContent = "Creating your account…";
+
+      try {
+        const res = await fetch("/api/v1/auth/sign_up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, username }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          statusEl.style.color = "#cc3333";
+          statusEl.textContent = data.message || "Sign up failed. Please try again.";
+          return;
+        }
+
+        if (data.data?.access_token) {
+          localStorage.setItem("auth_token", data.data.access_token);
+        }
+        if (data.data?.refresh_token) {
+          localStorage.setItem("refresh_token", data.data.refresh_token);
+        }
+
+        statusEl.style.color = "#2a7a2a";
+        statusEl.textContent = "Account created! Redirecting to your account…";
+        setTimeout(() => {
+          window.location.href = "/account";
+        }, 1000);
+      } catch {
+        statusEl.style.color = "#cc3333";
+        statusEl.textContent = "Network error. Is the server running at localhost:8000?";
+      }
     });
   </script>
 </body>
