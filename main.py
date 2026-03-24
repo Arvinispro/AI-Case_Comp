@@ -3,7 +3,8 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.exceptions import AppError
@@ -20,6 +21,18 @@ app = FastAPI(
     version=settings.app_version,
 )
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def root() -> FileResponse:
+    return FileResponse("static/index.html")
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/frontend/menu/menu.html")
+
 
 @app.get("/health")
 def health() -> dict:
@@ -27,6 +40,18 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(course_router, prefix="/api/v1")
+app.include_router(account_router)
+
+app.mount("/frontend", StaticFiles(directory=BASE_DIR / "frontend"), name="frontend")
+
+
+def _first_validation_message(errors: list[dict]) -> str:
+    if not errors:
+        return "Validation failed"
+
+    first_error = errors[0]
+    return str(first_error.get("msg") or "Validation failed")
 
 
 @app.exception_handler(AppError)
