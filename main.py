@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
@@ -8,11 +12,27 @@ from app.models import ErrorDetail
 from app.routers.auth import router as auth_router
 
 settings = get_settings()
+BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
+
+
+@app.get("/sign-up", include_in_schema=False)
+def sign_up_page() -> FileResponse:
+    return FileResponse(BASE_DIR / "app" / "static" / "sign-up.html")
+
+
+@app.get("/sign-in", include_in_schema=False)
+def sign_in_page() -> FileResponse:
+    return FileResponse(BASE_DIR / "app" / "static" / "sign-in.html")
+
+
+@app.get("/account", include_in_schema=False)
+def account_page() -> FileResponse:
+    return FileResponse(BASE_DIR / "app" / "static" / "account.html")
 
 
 @app.get("/health")
@@ -21,6 +41,14 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
+
+
+def _first_validation_message(errors: list[dict]) -> str:
+    if not errors:
+        return "Validation failed"
+
+    first_error = errors[0]
+    return str(first_error.get("msg") or "Validation failed")
 
 
 @app.exception_handler(AppError)
@@ -36,11 +64,14 @@ async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    raw_errors = exc.errors()
+    exact_message = _first_validation_message(raw_errors)
+    errors = jsonable_encoder(raw_errors)
     body = {
         "success": False,
-        "message": "Validation failed",
+        "message": exact_message,
         "data": None,
-        "error": ErrorDetail(code="VALIDATION_ERROR", message="Validation failed", details=exc.errors()).model_dump(),
+        "error": ErrorDetail(code="VALIDATION_ERROR", message=exact_message, details=errors).model_dump(),
     }
     return JSONResponse(status_code=422, content=body)
 

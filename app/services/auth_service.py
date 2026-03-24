@@ -104,6 +104,7 @@ class AuthService:
                     "xp": 0,
                     "level": 1,
                     "learning_type": None,
+                    "points": 0,
                 }
             ).execute()
         except Exception as exc:  # noqa: BLE001

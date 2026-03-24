@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 import pytest
-from app.main import app
+from main import app
 from uuid import uuid4
 
 
