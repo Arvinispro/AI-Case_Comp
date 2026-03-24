@@ -1,0 +1,117 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.container {
+    display: flex;
+    width: 1000px;
+    height: 650px;
+    background-color: white;
+    /* Removed the blue border from previous if you want it clean, 
+       add 'border: 5px solid #33a1ff;' back if needed */
+}
+
+.left-panel {
+    flex: 1;
+    background-color: #d3d3d3;
+}
+
+.right-panel {
+    flex: 1.2;
+    padding: 40px 60px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    text-align: right;
+}
+
+.back-link {
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+    font-family: 'Almendra', serif;
+    font-size: 1.5rem;
+}
+
+.welcome-header {
+    margin-top: 20px;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.welcome-text {
+    font-family: 'Almendra', serif;
+    font-size: 5rem;
+    line-height: 1.1;
+}
+
+/* Offset the "Back !" text slightly to match the image layout */
+.indent {
+    margin-left: 40px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 400px;
+    margin: 0 auto;
+    /* Center the form fields */
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    font-family: 'Almendra', serif;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 1.1rem;
+}
+
+.input-group input {
+    background-color: #d3d3d3;
+    border: none;
+    height: 40px;
+    padding: 0 10px;
+}
+
+.login-btn {
+    align-self: center;
+    margin-top: 60px;
+    padding: 8px 50px;
+    background-color: #d3d3d3;
+    border: none;
+    font-family: 'Almendra', serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.login-btn:hover {
+    background-color: #c0c0c0;
+}
+
+.form-status {
+    font-family: 'Almendra', serif;
+    font-size: 0.9rem;
+    color: #cc3333;
+    min-height: 1.2em;
+    text-align: center;
+}
