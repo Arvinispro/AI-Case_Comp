@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import RedirectResponse
 
 from app.dependencies import get_course_service, get_current_user_id
@@ -78,10 +78,11 @@ def upload_text_material(
 def upload_file_material(
     course_id: str,
     file: UploadFile = File(..., description="Study material or problem set (PDF, PNG, JPG, TXT, MD, DOCX, PPTX …)"),
+    mode: str = Query(default="study", description="Current workflow mode. Use 'study' for study uploads."),
     user_id: str = Depends(get_current_user_id),
     course_service: CourseService = Depends(get_course_service),
 ) -> CourseMaterialResponse:
-    """Upload a study material or problem-set file to Supabase Storage.
+    """Upload a file for the selected mode.
 
     Accepted formats: PDF, PNG, JPG/JPEG, GIF, WEBP, TXT, MD, DOC, DOCX, PPTX.
     Maximum size: 50 MB.
@@ -101,7 +102,16 @@ def upload_file_material(
         raise CourseServiceError(413, "FILE_TOO_LARGE", "File must be 50 MB or smaller")
 
     mime_type = file.content_type or "application/octet-stream"
-    data = course_service.add_file_material(user_id, course_id, file_bytes, filename, mime_type)
+    if mode.lower() != "study":
+        raise CourseServiceError(
+            400,
+            "UNSUPPORTED_MODE",
+            "Only 'study' mode upload behavior is enabled right now.",
+        )
+
+    # Study mode requirement: store file bytes in course_materials.material
+    # and extracted/metadata text in course_materials.text_material.
+    data = course_service.add_study_file_material(user_id, course_id, file_bytes, filename, mime_type)
     return CourseMaterialResponse(success=True, message=f"'{filename}' uploaded successfully", data=data)
 
 

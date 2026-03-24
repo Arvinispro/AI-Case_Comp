@@ -172,6 +172,49 @@ class CourseService:
             raise CourseServiceError(500, "MATERIAL_CREATE_FAILED", "File upload returned no data")
         return self._serialize_material(data[0])
 
+    def add_study_file_material(
+        self,
+        user_id: str,
+        course_id: str,
+        file_bytes: bytes,
+        filename: str,
+        mime_type: str,
+    ) -> CourseMaterial:
+        """Store study uploads directly in course_materials.material/text_material."""
+        self._assert_course_owner(user_id, course_id)
+
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS and mime_type not in ALLOWED_MIME_TYPES:
+            raise CourseServiceError(
+                415,
+                "UNSUPPORTED_FILE_TYPE",
+                f"File type '{ext or mime_type}' is not allowed. "
+                f"Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+            )
+
+        encoded_material = "\\x" + file_bytes.hex()
+        text_material = self._build_study_text_material(file_bytes, filename, mime_type, ext)
+        is_text_type = mime_type in {"text/plain", "text/markdown"} or ext in {".txt", ".md"}
+
+        record = {
+            "id": str(uuid.uuid4()),
+            "course_id": course_id,
+            "user_id": user_id,
+            "material": encoded_material,
+            "text_material": text_material,
+            "is_text": is_text_type,
+        }
+
+        try:
+            response = self.client.table("course_materials").insert(record).execute()
+        except Exception as exc:
+            raise CourseServiceError(500, "MATERIAL_CREATE_FAILED", f"Failed to save study file: {exc}") from exc
+
+        data = response.data or []
+        if not data:
+            raise CourseServiceError(500, "MATERIAL_CREATE_FAILED", "Study file upload returned no data")
+        return self._serialize_material(data[0])
+
     def list_materials(self, user_id: str, course_id: str) -> list[CourseMaterial]:
         self._assert_course_owner(user_id, course_id)
         response = (
@@ -221,3 +264,14 @@ class CourseService:
             text_material=row.get("text_material"),  # Preview/full content for txt
             created_at=row.get("created_at"),
         )
+
+    @staticmethod
+    def _build_study_text_material(file_bytes: bytes, filename: str, mime_type: str, ext: str) -> str:
+        """Return extracted text for text formats, otherwise store lightweight metadata."""
+        is_text_type = mime_type in {"text/plain", "text/markdown"} or ext in {".txt", ".md"}
+        if is_text_type:
+            try:
+                return file_bytes.decode("utf-8")[:MAX_TEXT_PREVIEW]
+            except UnicodeDecodeError:
+                return file_bytes.decode("latin-1")[:MAX_TEXT_PREVIEW]
+        return f"filename={filename};mime={mime_type};note=binary_content_in_material"
