@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathQuest | Log In</title>
+    <link rel="stylesheet" href="login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="left-panel"></div>
+
+        <div class="right-panel">
+            <header>
+                <a href="../menu/menu.html" class="back-link">Back</a>
+            </header>
+
+            <main class="form-container">
+                <div class="welcome-header">
+                    <h1 class="welcome-text">Welcome</h1>
+                    <h1 class="welcome-text indent">Back !</h1>
+                </div>
+
+                <form id="login-form" novalidate>
+                    <div class="input-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="jane@example.com" required />
+                    </div>
+
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Your password" required />
+                    </div>
+
+                    <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+
+                    <button type="submit" class="login-btn">Log in</button>
+                </form>
+            </main>
+        </div>
+    </div>
+    <script>
+        const form = document.getElementById("login-form");
+        const statusEl = document.getElementById("form-status");
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+
+            if (!email || !password) {
+                statusEl.textContent = "Please fill in all fields.";
+                return;
+            }
+
+            // Store intent for when backend is wired up
+            sessionStorage.setItem("pending_login", JSON.stringify({ email }));
+            statusEl.style.color = "#2a7a2a";
+            statusEl.textContent = "Details saved! Backend integration coming soon.";
+        });
+    </script>
+</body>
+
+</html>
