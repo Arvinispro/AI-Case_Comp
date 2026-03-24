@@ -31,7 +31,7 @@ class AuthService:
     def _get_profile(self, user_id: str) -> dict | None:
         response = (
             self.service_client.table("users")
-            .select("id, username, xp, level, learning_type, created_at")
+            .select("id, username, xp, level, points, learning_type, created_at")
             .eq("id", user_id)
             .limit(1)
             .execute()
@@ -46,11 +46,11 @@ class AuthService:
 
         if profile_obj is None:
             return UserProfile(id=user_id)
-
         return UserProfile(
             id=str(profile_obj.get("id", user_id)),
             username=profile_obj.get("username"),
             xp=profile_obj.get("xp"),
+            points=profile_obj.get("points"),
             level=profile_obj.get("level"),
             learning_type=str(profile_obj.get("learning_type")) if profile_obj.get("learning_type") else None,
             created_at=profile_obj.get("created_at"),
@@ -104,6 +104,7 @@ class AuthService:
                     "xp": 0,
                     "level": 1,
                     "learning_type": None,
+                    "points": 0,
                 }
             ).execute()
         except Exception as exc:  # noqa: BLE001

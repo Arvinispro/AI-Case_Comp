@@ -1,27 +1,24 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.exceptions import AppError
 from app.models import ErrorDetail
+from app.routers.accountpage import router as account_router
 from app.routers.auth import router as auth_router
 from app.routers.upload import router as course_router
 
 settings = get_settings()
+BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-@app.get("/", include_in_schema=False)
-def root() -> FileResponse:
-    return FileResponse("static/index.html")
 
 
 @app.get("/health")
@@ -30,7 +27,6 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
-app.include_router(course_router, prefix="/api/v1")
 
 
 @app.exception_handler(AppError)
@@ -46,11 +42,14 @@ async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    raw_errors = exc.errors()
+    exact_message = _first_validation_message(raw_errors)
+    errors = jsonable_encoder(raw_errors)
     body = {
         "success": False,
-        "message": "Validation failed",
+        "message": exact_message,
         "data": None,
-        "error": ErrorDetail(code="VALIDATION_ERROR", message="Validation failed", details=exc.errors()).model_dump(),
+        "error": ErrorDetail(code="VALIDATION_ERROR", message=exact_message, details=errors).model_dump(),
     }
     return JSONResponse(status_code=422, content=body)
 

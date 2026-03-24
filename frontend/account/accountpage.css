@@ -1,0 +1,238 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.dashboard-container {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    width: 1000px;
+    height: 650px;
+    background-color: #9e9e9e;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* MAIN CONTENT AREA */
+.main-content {
+    position: relative;
+}
+
+.profile-card {
+    background-color: #d3d3d3;
+    width: 440px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    gap: 20px;
+}
+
+.avatar-box {
+    width: 80px;
+    height: 80px;
+    background-color: #9e9e9e;
+    flex-shrink: 0;
+}
+
+.user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Almendra', serif;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #000;
+}
+
+.name-row {
+    margin-bottom: 2px;
+}
+
+.info-label {
+    min-width: 80px;
+}
+
+.info-value {
+    text-align: right;
+    min-width: 70px;
+}
+
+.menu-icon {
+    margin-top: 18px;
+    margin-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: fit-content;
+}
+
+.menu-icon span {
+    width: 35px;
+    height: 4px;
+    background-color: #d3d3d3;
+}
+
+/* MODES SECTION */
+.modes-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 34px;
+    margin-top: 24px;
+}
+
+.mode-item {
+    width: 300px;
+}
+
+.mode-box {
+    background-color: #d3d3d3;
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Almendra', serif;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #000;
+    text-decoration: none;
+    margin-bottom: 12px;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.mode-box:hover {
+    background-color: #dddddd;
+    transform: translateY(-2px);
+}
+
+.mode-box:active {
+    transform: translateY(0);
+}
+
+.mode-text {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: #f2f2f2;
+    font-family: Georgia, serif;
+}
+
+/* RANKING SIDEBAR */
+.ranking-sidebar {
+    background-color: #d3d3d3;
+    display: flex;
+    flex-direction: column;
+}
+
+.ranking-title {
+    background-color: #c0c0c0;
+    font-family: 'Almendra', serif;
+    font-size: 1.8rem;
+    padding: 15px;
+    text-align: center;
+    border-bottom: 2px solid #9e9e9e;
+}
+
+.ranking-list {
+    flex: 1;
+    background-color: #e0e0e0;
+    margin: 10px;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.rank-item {
+    display: grid;
+    grid-template-columns: 35px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 8px;
+    border-bottom: 1px solid #c8c8c8;
+    font-family: Georgia, serif;
+    font-size: 1rem;
+    color: #000;
+}
+
+.rank-item:last-child {
+    border-bottom: none;
+}
+
+.rank-number {
+    font-weight: bold;
+    text-align: center;
+}
+
+.rank-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rank-level {
+    font-weight: bold;
+}
+
+.menu-icon {
+    margin-top: 10px;
+    margin-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 35px;
+    cursor: pointer;
+}
+
+.menu-icon span {
+    width: 100%;
+    height: 4px;
+    background-color: #d3d3d3;
+    transition: 0.3s;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 150px;
+    left: 20px;
+    background-color: #d3d3d3;
+    display: none;
+    flex-direction: column;
+    width: 160px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.dropdown-menu a {
+    padding: 12px;
+    text-decoration: none;
+    color: black;
+    font-family: Georgia, serif;
+    border-bottom: 1px solid #bbb;
+}
+
+.dropdown-menu a:hover {
+    background-color: #c0c0c0;
+}
+
+/* add this when you changed the account page image: 
+
+.avatar-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
