@@ -1,60 +1,119 @@
-# AI-Case_Comp
+# AI-Case_Comp Supabase Backend
 
-Gemini API quick start for this workspace.
+Production-ready FastAPI backend with Supabase auth and profile management.
 
-## 1) Get an API key
+## Architecture
 
-1. Go to Google AI Studio: https://aistudio.google.com/
-2. Create an API key.
-3. Copy `.env.example` to `.env` and paste your key:
+- FastAPI app entrypoint: app/main.py
+- Auth routes: app/routes/auth.py
+- Pydantic v2 models: app/models.py
+- Supabase client helpers: app/services/supabase_client.py
+- Auth service/business logic: app/services/auth_service.py
+- Environment config: app/config.py
+- SQL migration from schema: migrations/001_init_schema.sql
+- Tests: tests/test_auth.py
+
+## Schema notes from tables.sql
+
+Used exactly as provided in migration. Notable issues found (proposed fixes, not applied automatically):
+
+1. past_problems.lllm_conversation appears to have a typo (3x 'l').
+	 - Proposed fix: rename to llm_conversation.
+2. All id columns are uuid NOT NULL without defaults.
+	 - Proposed fix: add DEFAULT gen_random_uuid() for safer inserts.
+3. users.username is not unique.
+	 - Proposed fix: add UNIQUE constraint to prevent duplicates.
+4. Some nullable fields likely should be stricter (e.g., created_at NOT NULL).
+	 - Proposed fix: enforce NOT NULL where appropriate.
+
+## Setup
+
+1) Create and activate a virtual environment (Python 3.11+).
+
+2) Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+3) Create env file:
 
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env`:
+4) Fill required values in .env:
 
 ```env
-GEMINI_API_KEY=your_real_key_here
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_DEFAULT_KEY=YOUR_SUPABASE_DEFAULT_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+JWT_SECRET=YOUR_SUPABASE_JWT_SECRET
 ```
 
-## 2) Node.js example
+## Database migration
 
-Install deps:
+Run the SQL in Supabase SQL Editor:
+
+- migrations/001_init_schema.sql
+
+Or using Supabase CLI migrations flow if you use CLI locally.
+
+## Run server
 
 ```bash
-npm init -y
-npm install @google/genai dotenv
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Enable ESM in `package.json` by adding:
+Swagger docs:
 
-```json
-"type": "module"
-```
+- http://127.0.0.1:8000/docs
 
-Run:
+## Auth API endpoints
+
+Base path: /api/v1/auth
+
+1) Sign up
 
 ```bash
-node gemini-node.js
+curl -X POST http://127.0.0.1:8000/api/v1/auth/sign_up \
+	-H "Content-Type: application/json" \
+	-d '{
+		"email": "alice@example.com",
+		"password": "Password123",
+		"username": "alice_01"
+	}'
 ```
 
-## 3) Python example
-
-Install deps:
+2) Sign in
 
 ```bash
-pip install google-genai python-dotenv
+curl -X POST http://127.0.0.1:8000/api/v1/auth/sign_in \
+	-H "Content-Type: application/json" \
+	-d '{
+		"email": "alice@example.com",
+		"password": "Password123"
+	}'
 ```
 
-Run:
+3) Get current user
 
 ```bash
-python gemini-python.py
+curl http://127.0.0.1:8000/api/v1/auth/current_user \
+	-H "Authorization: Bearer <ACCESS_TOKEN>"
 ```
 
-## Files
+4) Log out
 
-- `.env.example` - environment variable template.
-- `gemini-node.js` - Node.js Gemini API example.
-- `gemini-python.py` - Python Gemini API example.
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/auth/log_out \
+	-H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+## Run tests
+
+```bash
+pytest -q
+```
+
+The test suite includes success and common failure cases for all auth routes.
