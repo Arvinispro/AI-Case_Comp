@@ -181,6 +181,7 @@
           document.getElementById('level').textContent = user.level ?? '—';
           document.getElementById('xp').textContent = user.xp ?? '—';
           document.getElementById('points').textContent = user.points ?? '—';
+          console.log(user.points)
         } catch (error) {
           showError('Network error. Please try again.');
         }

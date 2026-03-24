@@ -12,6 +12,7 @@ class UserProfile(BaseModel):
     username: str | None = None
     xp: int | None = None
     level: int | None = None
+    points: int | None = None
     learning_type: str | None = None
     created_at: str | None = None
 
