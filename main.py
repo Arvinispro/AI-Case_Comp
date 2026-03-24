@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
@@ -11,6 +11,7 @@ from app.exceptions import AppError
 from app.models import ErrorDetail
 from app.routers.accountpage import router as account_router
 from app.routers.auth import router as auth_router
+from app.routers.upload import router as course_router
 
 settings = get_settings()
 BASE_DIR = Path(__file__).resolve().parent
@@ -19,6 +20,13 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def root() -> FileResponse:
+    return FileResponse("static/index.html")
 
 
 @app.get("/", include_in_schema=False)
@@ -32,6 +40,7 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(course_router, prefix="/api/v1")
 app.include_router(account_router)
 
 app.mount("/frontend", StaticFiles(directory=BASE_DIR / "frontend"), name="frontend")
