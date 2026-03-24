@@ -1,2 +1,11 @@
 google-genai
 python-dotenv
+supabase
+dotenv
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+pydantic-settings
+email-validator
+pytest
+httpx
