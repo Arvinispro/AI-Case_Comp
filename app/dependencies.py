@@ -3,6 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.exceptions import AuthServiceError
 from app.services.auth_service import AuthService
+from app.services.supabase_client import get_default_client
 
 security_scheme = HTTPBearer(auto_error=False)
 
@@ -17,3 +18,23 @@ def get_bearer_token(
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise AuthServiceError(401, "MISSING_TOKEN", "Missing or invalid Authorization header")
     return credentials.credentials
+
+
+def get_current_user_id(token: str = Depends(get_bearer_token)) -> str:
+    """Verify the JWT with Supabase and return the user id."""
+    try:
+        client = get_default_client()
+        response = client.auth.get_user(token)
+        user = getattr(response, "user", None)
+        if user is None or not getattr(user, "id", None):
+            raise AuthServiceError(401, "INVALID_TOKEN", "Invalid or expired token")
+        return str(user.id)
+    except AuthServiceError:
+        raise
+    except Exception as exc:
+        raise AuthServiceError(401, "INVALID_TOKEN", "Could not verify token") from exc
+
+
+def get_course_service():
+    from app.services.course_service import CourseService
+    return CourseService()

@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.exceptions import AppError
 from app.models import ErrorDetail
 from app.routers.auth import router as auth_router
+from app.routers.upload import router as course_router
 
 settings = get_settings()
 
@@ -14,6 +16,13 @@ app = FastAPI(
     version=settings.app_version,
 )
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def root() -> FileResponse:
+    return FileResponse("static/index.html")
+
 
 @app.get("/health")
 def health() -> dict:
@@ -21,6 +30,7 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(course_router, prefix="/api/v1")
 
 
 @app.exception_handler(AppError)

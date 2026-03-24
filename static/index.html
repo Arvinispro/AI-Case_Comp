@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MathQuest — Courses</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0f0f1a;
+      color: #e2e2f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #a78bfa;
+      text-align: center;
+      letter-spacing: 0.03em;
+    }
+
+    h1 span {
+      color: #f472b6;
+    }
+
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2d2d4e;
+      border-radius: 14px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card.hidden {
+      display: none;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #7c7ca8;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    textarea,
+    select {
+      width: 100%;
+      background: #12122a;
+      border: 1px solid #2d2d4e;
+      border-radius: 8px;
+      color: #e2e2f0;
+      font-size: 0.95rem;
+      padding: 0.65rem 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #a78bfa;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #4a4a6a;
+    }
+
+    input.hidden {
+      display: none;
+    }
+
+    button {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      align-self: flex-end;
+    }
+
+    button:hover {
+      opacity: 0.88;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    button.full-width {
+      align-self: stretch;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    .button-row button {
+      align-self: auto;
+    }
+
+    #course-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .course-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: #12122a;
+      border: 1px solid #2d2d4e;
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .course-item:hover,
+    .course-item.selected {
+      border-color: #a78bfa;
+      background: #1e1e40;
+    }
+
+    .course-item .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #a78bfa;
+      flex-shrink: 0;
+    }
+
+    .course-item span {
+      font-size: 0.95rem;
+    }
+
+    .empty-state {
+      color: #4a4a6a;
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .feedback {
+      font-size: 0.85rem;
+      min-height: 1.2em;
+      color: #34d399;
+    }
+
+    .feedback.error {
+      color: #f87171;
+    }
+
+    .auth-link {
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .auth-link a {
+      color: #a78bfa;
+      cursor: pointer;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+
+    .auth-link a:hover {
+      border-bottom-color: #a78bfa;
+    }
+
+    .user-badge {
+      background: #2d2d4e;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      text-align: center;
+      color: #a78bfa;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Math<span>Quest</span> 🎮</h1>
+
+    <!-- Auth Section -->
+    <div id="auth-section" class="card">
+      <span class="card-title">Sign Up or Sign In</span>
+      <input id="auth-email" type="email" placeholder="Email" autocomplete="email" />
+      <input id="auth-password" type="password" placeholder="Password (min 8 chars, 1 upper, 1 lower, 1 digit)"
+        autocomplete="current-password" />
+      <input id="auth-username" type="text" placeholder="Username (letters, numbers, _, -)" autocomplete="off"
+        class="hidden" />
+      <p class="feedback" id="auth-feedback"></p>
+      <div class="button-row">
+        <button onclick="toggleAuthMode()">Switch to Sign Up</button>
+        <button onclick="authenticate()">Sign In</button>
+      </div>
+      <div class="auth-link">
+        Don't have an account? <a onclick="toggleAuthMode()">Sign up here</a>
+      </div>
+    </div>
+
+    <!-- Course Section (hidden until logged in) -->
+    <div id="course-section" class="hidden">
+      <div class="user-badge" id="user-badge"></div>
+
+      <div class="card">
+        <span class="card-title">Create a new course</span>
+        <input id="course-name" type="text" placeholder="Course name (e.g. Linear Algebra)" maxlength="200"
+          autocomplete="off" />
+        <textarea id="course-details" placeholder="Short description (optional)" rows="3" maxlength="2000"></textarea>
+        <p class="feedback" id="course-feedback"></p>
+        <button id="create-btn" onclick="createCourse()" class="full-width">Create Course</button>
+      </div>
+
+      <div class="card">
+        <span class="card-title">Or pick an existing course</span>
+        <div id="course-list">
+          <p class="empty-state" id="empty-msg">No courses yet — create one above!</p>
+        </div>
+      </div>
+
+      <button onclick="logout()" style="align-self: stretch;">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    const API = "/api/v1";
+    let isSignUpMode = false;
+
+    function toggleAuthMode() {
+      isSignUpMode = !isSignUpMode;
+      const usernameEl = document.getElementById("auth-username");
+      const switchBtn = document.querySelector("#auth-section .button-row button:first-child");
+      const authBtn = document.querySelector("#auth-section .button-row button:last-child");
+      const linkSpan = document.querySelector(".auth-link");
+
+      if (isSignUpMode) {
+        usernameEl.classList.remove("hidden");
+        switchBtn.textContent = "Switch to Sign In";
+        authBtn.textContent = "Sign Up";
+        linkSpan.innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in here</a>';
+      } else {
+        usernameEl.classList.add("hidden");
+        switchBtn.textContent = "Switch to Sign Up";
+        authBtn.textContent = "Sign In";
+        linkSpan.innerHTML = "Don't have an account? <a onclick=\"toggleAuthMode()\">Sign up here</a>";
+      }
+    }
+
+    async function authenticate() {
+      const email = document.getElementById("auth-email").value.trim();
+      const password = document.getElementById("auth-password").value.trim();
+      const username = document.getElementById("auth-username").value.trim();
+      const feedback = document.getElementById("auth-feedback");
+
+      feedback.className = "feedback";
+      if (!email || !password) {
+        setFeedback(feedback, "Please fill in all fields.", true);
+        return;
+      }
+
+      if (isSignUpMode && !username) {
+        setFeedback(feedback, "Please enter a username.", true);
+        return;
+      }
+
+      const endpoint = isSignUpMode ? "sign_up" : "sign_in";
+      const body = isSignUpMode
+        ? { email, password, username }
+        : { email, password };
+
+      try {
+        const res = await fetch(`${API}/auth/${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const json = await res.json();
+
+        if (json.success && json.data?.access_token) {
+          localStorage.setItem("access_token", json.data.access_token);
+          localStorage.setItem("username", json.data.user?.username || email);
+          setFeedback(feedback, isSignUpMode ? "✓ Account created!" : "✓ Signed in!");
+          setTimeout(() => showCourseSection(), 500);
+        } else {
+          setFeedback(feedback, json.error?.message || json.message || "Authentication failed.", true);
+        }
+      } catch (err) {
+        setFeedback(feedback, "Network error — is the server running?", true);
+      }
+    }
+
+    async function createCourse() {
+      const nameEl = document.getElementById("course-name");
+      const detailsEl = document.getElementById("course-details");
+      const feedback = document.getElementById("course-feedback");
+      const name = nameEl.value.trim();
+
+      feedback.className = "feedback";
+      if (!name) {
+        setFeedback(feedback, "Please enter a course name.", true);
+        return;
+      }
+
+      const token = localStorage.getItem("access_token");
+      try {
+        const res = await fetch(`${API}/courses`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name, details: detailsEl.value.trim() || null }),
+        });
+        const json = await res.json();
+
+        if (json.success) {
+          setFeedback(feedback, `✓ "${json.data.name}" created!`);
+          nameEl.value = "";
+          detailsEl.value = "";
+          addCourseToList(json.data);
+        } else {
+          setFeedback(feedback, json.message || "Failed to create course.", true);
+        }
+      } catch (err) {
+        setFeedback(feedback, "Network error — is the server running?", true);
+      }
+    }
+
+    async function loadCourses() {
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API}/courses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+        if (json.success) renderCourses(json.data);
+      } catch (_) { }
+    }
+
+    function renderCourses(courses) {
+      const list = document.getElementById("course-list");
+      const empty = document.getElementById("empty-msg");
+
+      if (!courses || courses.length === 0) return;
+      empty && empty.remove();
+
+      list.innerHTML = "";
+      courses.forEach((c) => {
+        const el = document.createElement("div");
+        el.className = "course-item";
+        el.innerHTML = `<span class="dot"></span><span>${escapeHtml(c.name)}</span>`;
+        el.onclick = () => selectCourse(el, c);
+        list.appendChild(el);
+      });
+    }
+
+    function addCourseToList(course) {
+      const list = document.getElementById("course-list");
+      const empty = document.getElementById("empty-msg");
+      empty && empty.remove();
+
+      const el = document.createElement("div");
+      el.className = "course-item";
+      el.innerHTML = `<span class="dot"></span><span>${escapeHtml(course.name)}</span>`;
+      el.onclick = () => selectCourse(el, course);
+      list.prepend(el);
+    }
+
+    function selectCourse(el, course) {
+      document.querySelectorAll(".course-item").forEach((i) => i.classList.remove("selected"));
+      el.classList.add("selected");
+      console.log("Selected course:", course);
+    }
+
+    function showCourseSection() {
+      document.getElementById("auth-section").classList.add("hidden");
+      document.getElementById("course-section").classList.remove("hidden");
+      const username = localStorage.getItem("username");
+      document.getElementById("user-badge").textContent = `Logged in as ${username || "User"}`;
+      loadCourses();
+    }
+
+    function logout() {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("username");
+      document.getElementById("auth-section").classList.remove("hidden");
+      document.getElementById("course-section").classList.add("hidden");
+      document.getElementById("auth-email").value = "";
+      document.getElementById("auth-password").value = "";
+      document.getElementById("auth-username").value = "";
+      setFeedback(document.getElementById("auth-feedback"), "");
+    }
+
+    function setFeedback(el, msg, isError = false) {
+      el.textContent = msg;
+      el.className = isError ? "feedback error" : "feedback";
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+      );
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        showCourseSection();
+      }
+    });
+  </script>
+</body>
+
+</html>
