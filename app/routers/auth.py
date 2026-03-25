@@ -1,7 +1,17 @@
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from app.dependencies import get_auth_service, get_bearer_token
-from app.models import AuthResponse, LeaderboardResponse, MessageData, MessageResponse, SignInRequest, SignUpRequest, UserResponse
+from app.models import (
+    AuthResponse,
+    LeaderboardResponse,
+    MessageData,
+    MessageResponse,
+    RewardXpRequest,
+    RewardXpResponse,
+    SignInRequest,
+    SignUpRequest,
+    UserResponse,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -41,6 +51,16 @@ def get_current_user(
 def get_leaderboard(auth_service: AuthService = Depends(get_auth_service)) -> LeaderboardResponse:
     data = auth_service.get_leaderboard(limit=10)
     return LeaderboardResponse(success=True, message="Leaderboard retrieved", data=data)
+
+
+@router.post("/rewards/xp", response_model=RewardXpResponse)
+def reward_xp(
+    payload: RewardXpRequest,
+    token: str = Depends(get_bearer_token),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> RewardXpResponse:
+    data = auth_service.award_xp(token, payload.xp)
+    return RewardXpResponse(success=True, message="XP reward applied", data=data)
 
 
 @router.post("/profile_pic", response_model=UserResponse)

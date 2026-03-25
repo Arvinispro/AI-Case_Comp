@@ -51,6 +51,24 @@ class LeaderboardResponse(BaseModel):
     error: ErrorDetail | None = None
 
 
+class RewardXpRequest(BaseModel):
+    xp: int = Field(ge=1, le=720)
+
+
+class RewardXpData(BaseModel):
+    awarded_xp: int
+    total_xp: int
+    points: int
+    level: int
+
+
+class RewardXpResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: RewardXpData | None = None
+    error: ErrorDetail | None = None
+
+
 class MessageData(BaseModel):
     action: str
     problem_id: str | None = None

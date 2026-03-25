@@ -4,7 +4,7 @@
 CREATE TABLE public.course_materials (
   id uuid NOT NULL,
   course_id uuid,
-  material bytea,
+  material text,
   text_material text,
   is_text boolean,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -16,18 +16,26 @@ CREATE TABLE public.course_materials (
 CREATE TABLE public.courses (
   id uuid NOT NULL,
   user_id uuid,
-  name text NOT NULL,
+  name text NOT NULL UNIQUE,
   details text,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  llm_conversation text,
   CONSTRAINT courses_pkey PRIMARY KEY (id),
   CONSTRAINT courses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.learning_preferences (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  user_id uuid DEFAULT gen_random_uuid(),
+  preference text NOT NULL DEFAULT ''::text,
+  CONSTRAINT learning_preferences_pkey PRIMARY KEY (id),
+  CONSTRAINT learning_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.past_problems (
   id uuid NOT NULL,
   course_id uuid,
   question text,
   answer text,
-  llm_conversation bytea,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   user_id uuid,
   CONSTRAINT past_problems_pkey PRIMARY KEY (id),
@@ -42,5 +50,6 @@ CREATE TABLE public.users (
   learning_type uuid,
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   points integer,
+  profile_pic text,
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );

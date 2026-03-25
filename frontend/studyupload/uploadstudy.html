@@ -56,6 +56,8 @@
   <script>
     const API_BASE = "/api/v1/study";
     const STUDY_MODE_URL = "/frontend/studymode/studyaitutor.html";
+    const TIMER_SETUP_URL = "/frontend/timer/timer.html";
+    const TIMER_PENDING_SESSION_KEY = "pending_timer_setup";
     const uploadBtn = document.getElementById("uploadBtn");
     const fileInput = document.getElementById("fileInput");
     const uploadedFiles = document.getElementById("uploadedFiles");
@@ -83,15 +85,23 @@
       const typedCourse = courseInput.value.trim();
       const selectedCourseName = typedCourse || (selectedCourseId ? dropdownBtn.textContent.trim() : "Study session");
 
-      sessionStorage.setItem("study_mode_session", JSON.stringify({
+      const studySession = {
         courseId: selectedCourseId,
         courseName: selectedCourseName,
         persisted,
         materialFiles: selectedFiles.map((file) => file.name),
         startedAt: new Date().toISOString()
+      };
+
+      sessionStorage.setItem(TIMER_PENDING_SESSION_KEY, JSON.stringify({
+        mode: "study",
+        sessionKey: "study_mode_session",
+        sessionData: studySession,
+        nextUrl: STUDY_MODE_URL,
+        backUrl: "/frontend/studyupload/uploadstudy.html"
       }));
 
-      window.location.href = STUDY_MODE_URL;
+      window.location.href = TIMER_SETUP_URL;
     }
 
     // Fetch all courses from backend

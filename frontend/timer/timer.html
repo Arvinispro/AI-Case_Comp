@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Set Your Timer</title>
+  <link rel="stylesheet" href="/frontend/timer/timer.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="timer-screen">
+
+    <div class="top-section">
+      <a href="#" class="back-btn" id="backBtn">Back</a>
+      <h1 class="title">Set your timer</h1>
+    </div>
+
+    <div class="bottom-section">
+      <div class="timer-control">
+        <button class="arrow-btn left-arrow" id="decreaseBtn" type="button" aria-label="Decrease time"></button>
+        <div class="time-display" id="timeDisplay">00:30:00</div>
+        <button class="arrow-btn right-arrow" id="increaseBtn" type="button" aria-label="Increase time"></button>
+      </div>
+
+      <div class="quick-add-row">
+        <button class="quick-add-btn" type="button" data-add-minutes="15">+ 00:15</button>
+        <button class="quick-add-btn" type="button" data-add-minutes="30">+ 00:30</button>
+        <button class="quick-add-btn" type="button" data-add-minutes="60">+ 01:00</button>
+      </div>
+
+      <button class="start-btn" id="startBtn" type="button">Start!</button>
+    </div>
+
+  </div>
+
+  <script>
+    const PENDING_TIMER_KEY = "pending_timer_setup";
+    const ACTIVE_TIMER_KEY = "active_session_timer";
+    const STEP_SECONDS = 5 * 60;
+    const MAX_SECONDS = 12 * 60 * 60;
+
+    const backBtn = document.getElementById("backBtn");
+    const decreaseBtn = document.getElementById("decreaseBtn");
+    const increaseBtn = document.getElementById("increaseBtn");
+    const timeDisplay = document.getElementById("timeDisplay");
+    const startBtn = document.getElementById("startBtn");
+    const quickAddButtons = Array.from(document.querySelectorAll("[data-add-minutes]"));
+
+    const pendingSetup = readPendingSetup();
+    let selectedSeconds = getInitialSeconds();
+
+    function readPendingSetup() {
+      const raw = sessionStorage.getItem(PENDING_TIMER_KEY);
+      if (!raw) {
+        return null;
+      }
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function getInitialSeconds() {
+      const existing = Number(pendingSetup?.sessionData?.timer?.durationSeconds);
+      if (Number.isFinite(existing) && existing > 0) {
+        return Math.min(existing, MAX_SECONDS);
+      }
+      return 30 * 60;
+    }
+
+    function formatDuration(totalSeconds) {
+      const seconds = Math.max(0, Number(totalSeconds) || 0);
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+
+      const hh = String(hours).padStart(2, "0");
+      const mm = String(minutes).padStart(2, "0");
+      const ss = String(secs).padStart(2, "0");
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    function updateDisplay() {
+      timeDisplay.textContent = formatDuration(selectedSeconds);
+    }
+
+    function adjustSeconds(delta) {
+      selectedSeconds = Math.min(MAX_SECONDS, Math.max(0, selectedSeconds + delta));
+      updateDisplay();
+    }
+
+    backBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (pendingSetup?.backUrl) {
+        window.location.href = pendingSetup.backUrl;
+        return;
+      }
+      window.history.back();
+    });
+
+    decreaseBtn.addEventListener("click", () => adjustSeconds(-STEP_SECONDS));
+    increaseBtn.addEventListener("click", () => adjustSeconds(STEP_SECONDS));
+
+    quickAddButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const minutes = Number(button.dataset.addMinutes || 0);
+        if (!Number.isFinite(minutes) || minutes <= 0) {
+          return;
+        }
+        adjustSeconds(minutes * 60);
+      });
+    });
+
+    startBtn.addEventListener("click", () => {
+      if (!pendingSetup?.sessionKey || !pendingSetup?.nextUrl) {
+        alert("Session setup not found. Please upload files again.");
+        return;
+      }
+
+      if (selectedSeconds <= 0) {
+        alert("Please set a timer greater than 0.");
+        return;
+      }
+
+      const nowMs = Date.now();
+      const startedAt = new Date(nowMs).toISOString();
+      const endsAt = new Date(nowMs + selectedSeconds * 1000).toISOString();
+
+      const timer = {
+        mode: pendingSetup.mode || null,
+        durationSeconds: selectedSeconds,
+        durationMinutes: Math.round(selectedSeconds / 60),
+        startedAt,
+        endsAt
+      };
+
+      const sessionData = {
+        ...(pendingSetup.sessionData || {}),
+        timer
+      };
+
+      sessionStorage.setItem(pendingSetup.sessionKey, JSON.stringify(sessionData));
+      sessionStorage.setItem(ACTIVE_TIMER_KEY, JSON.stringify(timer));
+      sessionStorage.removeItem(PENDING_TIMER_KEY);
+
+      window.location.href = pendingSetup.nextUrl;
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>

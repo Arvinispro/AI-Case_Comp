@@ -60,9 +60,16 @@
     const chatMessages = document.getElementById("chatMessages");
     const chatInput = document.getElementById("chatInput");
     const sendBtn = document.getElementById("sendBtn");
+    const timerText = document.querySelector(".timer");
+    const timerFill = document.querySelector(".time-fill");
+    const SUMMARY_URL = "/frontend/summary/summary.html";
+    const SESSION_REWARD_KEY = "session_reward_summary";
+    const ACTIVE_TIMER_KEY = "active_session_timer";
 
     let materials = [];
     let activeMaterialIndex = 0;
+    let sessionTimerInterval = null;
+    let hasSessionEnded = false;
 
     function getAuthToken() {
       return localStorage.getItem("auth_token");
@@ -81,56 +88,108 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function getSessionMaterialFiles() {
+    function getPracticeSession() {
       const raw = sessionStorage.getItem("practice_mode_session");
       if (!raw) {
-        return [];
+        return null;
       }
       try {
-        const session = JSON.parse(raw);
-        return Array.isArray(session.materialFiles) ? session.materialFiles : [];
+        return JSON.parse(raw);
       } catch (_) {
-        return [];
+        return null;
       }
+    }
+
+    function getSessionMaterialFiles() {
+      const session = getPracticeSession();
+      return Array.isArray(session?.materialFiles) ? session.materialFiles : [];
     }
 
     function getSessionAnswerFiles() {
-      const raw = sessionStorage.getItem("practice_mode_session");
-      if (!raw) {
-        return [];
-      }
-      try {
-        const session = JSON.parse(raw);
-        return Array.isArray(session.answerFiles) ? session.answerFiles : [];
-      } catch (_) {
-        return [];
-      }
+      const session = getPracticeSession();
+      return Array.isArray(session?.answerFiles) ? session.answerFiles : [];
     }
 
     function getPracticeProblemId() {
-      const raw = sessionStorage.getItem("practice_mode_session");
-      if (!raw) {
-        return null;
-      }
-      try {
-        const session = JSON.parse(raw);
-        return session?.problemId || null;
-      } catch (_) {
-        return null;
-      }
+      const session = getPracticeSession();
+      return session?.problemId || null;
     }
 
     function getPracticeCourseId() {
-      const raw = sessionStorage.getItem("practice_mode_session");
-      if (!raw) {
-        return null;
+      const session = getPracticeSession();
+      return session?.courseId || null;
+    }
+
+    function formatRemaining(secondsRemaining) {
+      const safe = Math.max(0, Math.floor(secondsRemaining));
+      const hours = Math.floor(safe / 3600);
+      const minutes = Math.floor((safe % 3600) / 60);
+      const seconds = safe % 60;
+
+      if (hours > 0) {
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
       }
-      try {
-        const session = JSON.parse(raw);
-        return session?.courseId || null;
-      } catch (_) {
-        return null;
+
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function startSessionTimer() {
+      if (!timerText || !timerFill) {
+        return;
       }
+
+      const session = getPracticeSession();
+      const timer = session?.timer || null;
+      const durationSeconds = Number(timer?.durationSeconds || 0);
+      const endsAtMs = Date.parse(timer?.endsAt || "");
+
+      if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isFinite(endsAtMs)) {
+        timerText.textContent = "00:00";
+        timerFill.style.width = "100%";
+        return;
+      }
+
+      const finalizeSession = () => {
+        if (hasSessionEnded) {
+          return;
+        }
+        hasSessionEnded = true;
+
+        const awardedMinutes = Math.max(1, Number(timer?.durationMinutes) || Math.ceil(durationSeconds / 60));
+        const rewardId = `practice-${timer?.startedAt || Date.now()}-${durationSeconds}`;
+
+        sessionStorage.setItem(SESSION_REWARD_KEY, JSON.stringify({
+          mode: "practice",
+          durationMinutes: awardedMinutes,
+          xpAwarded: awardedMinutes,
+          rewardId,
+          completedAt: new Date().toISOString()
+        }));
+
+        sessionStorage.removeItem("practice_mode_session");
+        sessionStorage.removeItem(ACTIVE_TIMER_KEY);
+        window.location.href = SUMMARY_URL;
+      };
+
+      const tick = () => {
+        const nowMs = Date.now();
+        const remainingSeconds = Math.max(0, Math.ceil((endsAtMs - nowMs) / 1000));
+        const progressPercent = Math.max(0, Math.min(100, (remainingSeconds / durationSeconds) * 100));
+
+        timerText.textContent = formatRemaining(remainingSeconds);
+        timerFill.style.width = `${progressPercent}%`;
+
+        if (remainingSeconds === 0) {
+          if (sessionTimerInterval) {
+            clearInterval(sessionTimerInterval);
+            sessionTimerInterval = null;
+          }
+          finalizeSession();
+        }
+      };
+
+      tick();
+      sessionTimerInterval = window.setInterval(tick, 1000);
     }
 
     async function sendChatMessage() {
@@ -330,6 +389,7 @@
     }
 
     async function init() {
+      startSessionTimer();
       await loadSessionMaterials();
       renderMaterialTabs();
       renderMaterialViewer();

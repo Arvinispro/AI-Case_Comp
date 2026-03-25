@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session Summary</title>
+  <link rel="stylesheet" href="/frontend/summary/summary.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="summary-screen">
+    <button class="close-btn" id="closeBtn" aria-label="Back to account">&times;</button>
+
+    <header class="top-section">
+      <h1>Session complete</h1>
+      <p id="modeLabel">Great work.</p>
+    </header>
+
+    <main class="content-section">
+      <section class="summary-card">
+        <h2>Time spent</h2>
+        <p class="summary-value" id="timeSpentValue">0 min</p>
+      </section>
+
+      <section class="summary-card xp-card">
+        <h2>XP earned</h2>
+        <p class="summary-value" id="xpValue">+0 XP</p>
+        <p class="status-text" id="rewardStatus"></p>
+      </section>
+
+      <button class="account-btn" id="accountBtn" type="button">Back to account</button>
+    </main>
+  </div>
+
+  <script>
+    const SESSION_REWARD_KEY = "session_reward_summary";
+    const APPLIED_REWARDS_KEY = "applied_session_rewards";
+    const ACCOUNT_URL = "/account";
+
+    const timeSpentValue = document.getElementById("timeSpentValue");
+    const xpValue = document.getElementById("xpValue");
+    const modeLabel = document.getElementById("modeLabel");
+    const rewardStatus = document.getElementById("rewardStatus");
+    const accountBtn = document.getElementById("accountBtn");
+    const closeBtn = document.getElementById("closeBtn");
+
+    function navigateToAccount() {
+      window.location.href = ACCOUNT_URL;
+    }
+
+    function readRewardSummary() {
+      const raw = sessionStorage.getItem(SESSION_REWARD_KEY);
+      if (!raw) {
+        return null;
+      }
+
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function readAppliedRewardIds() {
+      const raw = localStorage.getItem(APPLIED_REWARDS_KEY);
+      if (!raw) {
+        return [];
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function writeAppliedRewardIds(ids) {
+      localStorage.setItem(APPLIED_REWARDS_KEY, JSON.stringify(ids));
+    }
+
+    async function applyXpReward(summary) {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        rewardStatus.textContent = "Sign in to sync XP to your account.";
+        return;
+      }
+
+      const rewardId = String(summary?.rewardId || "").trim();
+      if (!rewardId) {
+        rewardStatus.textContent = "Session reward saved locally.";
+        return;
+      }
+
+      const appliedIds = readAppliedRewardIds();
+      if (appliedIds.includes(rewardId)) {
+        rewardStatus.textContent = "XP already added to your account.";
+        return;
+      }
+
+      const xp = Math.max(1, Number(summary?.xpAwarded || 0));
+
+      try {
+        const response = await fetch("/api/v1/auth/rewards/xp", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ xp })
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          const message = payload?.message || "Unable to apply XP reward.";
+          rewardStatus.textContent = message;
+          return;
+        }
+
+        appliedIds.push(rewardId);
+        writeAppliedRewardIds(appliedIds);
+        rewardStatus.textContent = "XP added to your account.";
+      } catch (_) {
+        rewardStatus.textContent = "Unable to connect. XP will stay on this summary until synced.";
+      }
+    }
+
+    async function initSummary() {
+      const summary = readRewardSummary();
+
+      if (!summary) {
+        modeLabel.textContent = "No completed timed session found.";
+        rewardStatus.textContent = "Start a study or practice timer to earn XP.";
+        return;
+      }
+
+      const minutes = Math.max(1, Number(summary.durationMinutes || summary.xpAwarded || 0));
+      const xp = Math.max(1, Number(summary.xpAwarded || minutes));
+      const mode = (summary.mode || "session").toLowerCase();
+
+      modeLabel.textContent = mode === "practice"
+        ? "Practice session finished."
+        : "Study session finished.";
+      timeSpentValue.textContent = `${minutes} min`;
+      xpValue.textContent = `+${xp} XP`;
+
+      await applyXpReward({ ...summary, durationMinutes: minutes, xpAwarded: xp });
+    }
+
+    accountBtn.addEventListener("click", navigateToAccount);
+    closeBtn.addEventListener("click", navigateToAccount);
+
+    initSummary();
+  </script>
+</body>
+</html>

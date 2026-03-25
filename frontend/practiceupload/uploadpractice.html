@@ -58,6 +58,8 @@
   <script>
     const API_BASE = "/api/v1/practice";
     const PRACTICE_MODE_URL = "/frontend/practicemode/practiceaitutor.html";
+    const TIMER_SETUP_URL = "/frontend/timer/timer.html";
+    const TIMER_PENDING_SESSION_KEY = "pending_timer_setup";
     const uploadMaterialsBtn = document.getElementById("uploadMaterialsBtn");
     const materialsInput = document.getElementById("materialsInput");
     const materialsPreview = document.getElementById("materialsPreview");
@@ -89,7 +91,7 @@
       const typedCourse = courseInput.value.trim();
       const selectedCourseName = typedCourse || (selectedCourseId ? dropdownBtn.textContent.trim() : "Practice session");
 
-      sessionStorage.setItem("practice_mode_session", JSON.stringify({
+      const practiceSession = {
         problemId,
         courseId: selectedCourseId,
         courseName: selectedCourseName,
@@ -97,9 +99,17 @@
         materialFiles: selectedMaterialFile ? [selectedMaterialFile.name] : [],
         answerFiles: selectedAnswerFile ? [selectedAnswerFile.name] : [],
         startedAt: new Date().toISOString()
+      };
+
+      sessionStorage.setItem(TIMER_PENDING_SESSION_KEY, JSON.stringify({
+        mode: "practice",
+        sessionKey: "practice_mode_session",
+        sessionData: practiceSession,
+        nextUrl: PRACTICE_MODE_URL,
+        backUrl: "/frontend/practiceupload/uploadpractice.html"
       }));
 
-      window.location.href = PRACTICE_MODE_URL;
+      window.location.href = TIMER_SETUP_URL;
     }
 
     async function loadCourses() {

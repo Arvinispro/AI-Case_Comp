@@ -49,9 +49,16 @@
     const chatMessages = document.getElementById("chatMessages");
     const chatInput = document.getElementById("chatInput");
     const sendBtn = document.getElementById("sendBtn");
+    const timerText = document.querySelector(".timer");
+    const timerFill = document.querySelector(".time-fill");
+    const SUMMARY_URL = "/frontend/summary/summary.html";
+    const SESSION_REWARD_KEY = "session_reward_summary";
+    const ACTIVE_TIMER_KEY = "active_session_timer";
 
     let materials = [];
     let activeMaterialIndex = 0;
+    let sessionTimerInterval = null;
+    let hasSessionEnded = false;
 
     function getAuthToken() {
       return localStorage.getItem("auth_token");
@@ -77,6 +84,81 @@
     function getStudyCourseId() {
       const session = getStudySession();
       return session?.courseId || null;
+    }
+
+    function formatDuration(totalSeconds) {
+      const safe = Math.max(0, Math.floor(totalSeconds));
+      const hours = Math.floor(safe / 3600);
+      const minutes = Math.floor((safe % 3600) / 60);
+      const seconds = safe % 60;
+
+      if (hours > 0) {
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function startSessionTimer() {
+      if (!timerText || !timerFill) {
+        return;
+      }
+
+      const session = getStudySession();
+      const timer = session?.timer || null;
+      const durationSeconds = Number(timer?.durationSeconds || 0);
+      const startedAtMs = Date.parse(timer?.startedAt || "");
+      const endsAtMs = Date.parse(timer?.endsAt || "");
+
+      if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || !Number.isFinite(endsAtMs) || !Number.isFinite(startedAtMs)) {
+        timerText.textContent = "00:00 / 00:00";
+        timerFill.style.width = "0%";
+        return;
+      }
+
+      const finalizeSession = () => {
+        if (hasSessionEnded) {
+          return;
+        }
+        hasSessionEnded = true;
+
+        const awardedMinutes = Math.max(1, Number(timer?.durationMinutes) || Math.ceil(durationSeconds / 60));
+        const rewardId = `study-${timer?.startedAt || Date.now()}-${durationSeconds}`;
+
+        sessionStorage.setItem(SESSION_REWARD_KEY, JSON.stringify({
+          mode: "study",
+          durationMinutes: awardedMinutes,
+          xpAwarded: awardedMinutes,
+          rewardId,
+          completedAt: new Date().toISOString()
+        }));
+
+        sessionStorage.removeItem("study_mode_session");
+        sessionStorage.removeItem(ACTIVE_TIMER_KEY);
+        window.location.href = SUMMARY_URL;
+      };
+
+      const tick = () => {
+        const nowMs = Date.now();
+        const elapsedByStart = Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+        const elapsedByEnd = Math.max(0, durationSeconds - Math.ceil((endsAtMs - nowMs) / 1000));
+        const elapsedSeconds = Math.min(durationSeconds, Math.max(elapsedByStart, elapsedByEnd));
+        const progressPercent = Math.max(0, Math.min(100, (elapsedSeconds / durationSeconds) * 100));
+
+        timerText.textContent = `${formatDuration(elapsedSeconds)} / ${formatDuration(durationSeconds)}`;
+        timerFill.style.width = `${progressPercent}%`;
+
+        if (elapsedSeconds >= durationSeconds) {
+          if (sessionTimerInterval) {
+            clearInterval(sessionTimerInterval);
+            sessionTimerInterval = null;
+          }
+          finalizeSession();
+        }
+      };
+
+      tick();
+      sessionTimerInterval = window.setInterval(tick, 1000);
     }
 
     function appendChatMessage(role, text) {
@@ -272,6 +354,7 @@
     }
 
     async function init() {
+      startSessionTimer();
       await loadSessionMaterials();
       renderMaterialTabs();
       renderMaterialViewer();

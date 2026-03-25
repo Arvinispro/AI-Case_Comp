@@ -8,7 +8,7 @@ from supabase import Client
 
 from app.config import get_settings
 from app.exceptions import AuthServiceError
-from app.models import AuthData, LeaderboardUser, SignInRequest, SignUpRequest, UserProfile
+from app.models import AuthData, LeaderboardUser, RewardXpData, SignInRequest, SignUpRequest, UserProfile
 from app.services.supabase_client import get_default_client, get_service_client, get_user_client
 
 PROFILE_PIC_BUCKET = "profile pic"
@@ -194,6 +194,10 @@ class AuthService:
         return f"{base}/{url}"
 
     @staticmethod
+    def _calculate_level_from_xp(total_xp: int) -> int:
+        return max(1, (max(0, total_xp) // 100) + 1)
+
+    @staticmethod
     def _build_auth_data(user: UserProfile, session_obj: Any | None) -> AuthData:
         if session_obj is None:
             return AuthData(user=user)
@@ -333,6 +337,48 @@ class AuthService:
             level = row.get("level")
             leaderboard.append(LeaderboardUser(username=str(username), level=int(level or 0)))
         return leaderboard
+
+    def award_xp(self, access_token: str, xp_amount: int) -> RewardXpData:
+        if not access_token:
+            raise AuthServiceError(401, "MISSING_TOKEN", "Missing bearer token")
+
+        if xp_amount <= 0:
+            raise AuthServiceError(400, "INVALID_XP", "XP must be greater than 0")
+
+        try:
+            user_client = get_user_client(access_token)
+            user_response = user_client.auth.get_user(access_token)
+        except Exception as exc:  # noqa: BLE001
+            raise AuthServiceError(401, "INVALID_TOKEN", "Invalid or expired token") from exc
+
+        user = getattr(user_response, "user", None)
+        if user is None or not getattr(user, "id", None):
+            raise AuthServiceError(401, "INVALID_TOKEN", "Invalid or expired token")
+
+        user_id = str(user.id)
+        profile = self._get_profile(user_id)
+        if profile is None:
+            raise AuthServiceError(404, "USER_NOT_FOUND", "User profile not found")
+
+        current_xp = int(profile.get("xp") or 0)
+        current_points = int(profile.get("points") or 0)
+
+        total_xp = current_xp + int(xp_amount)
+        total_points = current_points + int(xp_amount)
+        level = self._calculate_level_from_xp(total_xp)
+
+        try:
+            self.service_client.table("users").update(
+                {
+                    "xp": total_xp,
+                    "points": total_points,
+                    "level": level,
+                }
+            ).eq("id", user_id).execute()
+        except Exception as exc:  # noqa: BLE001
+            raise AuthServiceError(500, "XP_REWARD_FAILED", f"Failed to apply XP reward: {exc}") from exc
+
+        return RewardXpData(awarded_xp=int(xp_amount), total_xp=total_xp, points=total_points, level=level)
 
     def upload_profile_picture(
         self,
