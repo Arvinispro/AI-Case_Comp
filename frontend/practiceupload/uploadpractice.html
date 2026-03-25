@@ -13,7 +13,7 @@
   <div class="screen">
     <a href="/account" class="back-link">&larr; Back</a>
     <div class="top-notes">
-      <div class="note-line">Replace this with your instruction text</div>
+      <div class="note-line">Upload one question file and an optional answer file</div>
       <div class="note-line">You can upload materials and answers,</div>
       <div class="note-line">then create or select a course</div>
     </div>
@@ -23,13 +23,13 @@
     <div class="upload-row">
       <div class="upload-group">
         <button class="ui-btn" id="uploadMaterialsBtn">Upload materials</button>
-        <input type="file" id="materialsInput" class="hidden-file-input" multiple>
+        <input type="file" id="materialsInput" class="hidden-file-input">
         <div class="file-preview" id="materialsPreview"></div>
       </div>
 
       <div class="upload-group">
         <button class="ui-btn" id="uploadAnswersBtn">Upload answers</button>
-        <input type="file" id="answersInput" class="hidden-file-input" multiple>
+        <input type="file" id="answersInput" class="hidden-file-input">
         <div class="file-preview" id="answersPreview"></div>
       </div>
     </div>
@@ -75,8 +75,8 @@
     const dropdownMenu = document.getElementById("dropdownMenu");
     const submitBtn = document.getElementById("submitBtn");
 
-    let selectedMaterialFiles = [];
-    let selectedAnswerFiles = [];
+    let selectedMaterialFile = null;
+    let selectedAnswerFile = null;
     let allCourses = [];
     let selectedCourseId = null;
     let skipDatabaseSave = false;
@@ -85,16 +85,17 @@
       return localStorage.getItem("auth_token");
     }
 
-    function startPracticeMode({ persisted }) {
+    function startPracticeMode({ persisted, problemId = null }) {
       const typedCourse = courseInput.value.trim();
       const selectedCourseName = typedCourse || (selectedCourseId ? dropdownBtn.textContent.trim() : "Practice session");
 
       sessionStorage.setItem("practice_mode_session", JSON.stringify({
+        problemId,
         courseId: selectedCourseId,
         courseName: selectedCourseName,
         persisted,
-        materialFiles: selectedMaterialFiles.map((file) => file.name),
-        answerFiles: selectedAnswerFiles.map((file) => file.name),
+        materialFiles: selectedMaterialFile ? [selectedMaterialFile.name] : [],
+        answerFiles: selectedAnswerFile ? [selectedAnswerFile.name] : [],
         startedAt: new Date().toISOString()
       }));
 
@@ -127,44 +128,42 @@
       materialsInput.click();
     });
 
-    function renderFilePreview(container, files, onRemove) {
+    function renderFilePreview(container, file, onRemove) {
       container.innerHTML = "";
 
-      if (files.length === 0) {
+      if (!file) {
         return;
       }
 
-      files.forEach((file, index) => {
-        const chip = document.createElement("span");
-        chip.className = "file-chip";
+      const chip = document.createElement("span");
+      chip.className = "file-chip";
 
-        const name = document.createElement("span");
-        name.className = "file-chip-name";
-        name.textContent = file.name;
+      const name = document.createElement("span");
+      name.className = "file-chip-name";
+      name.textContent = file.name;
 
-        const removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.className = "file-remove-btn";
-        removeBtn.textContent = "x";
-        removeBtn.setAttribute("aria-label", `Remove ${file.name}`);
-        removeBtn.addEventListener("click", () => onRemove(index));
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "file-remove-btn";
+      removeBtn.textContent = "x";
+      removeBtn.setAttribute("aria-label", `Remove ${file.name}`);
+      removeBtn.addEventListener("click", onRemove);
 
-        chip.appendChild(name);
-        chip.appendChild(removeBtn);
-        container.appendChild(chip);
-      });
+      chip.appendChild(name);
+      chip.appendChild(removeBtn);
+      container.appendChild(chip);
     }
 
     function renderMaterialFiles() {
-      renderFilePreview(materialsPreview, selectedMaterialFiles, (index) => {
-        selectedMaterialFiles.splice(index, 1);
+      renderFilePreview(materialsPreview, selectedMaterialFile, () => {
+        selectedMaterialFile = null;
         renderMaterialFiles();
       });
     }
 
     function renderAnswerFiles() {
-      renderFilePreview(answersPreview, selectedAnswerFiles, (index) => {
-        selectedAnswerFiles.splice(index, 1);
+      renderFilePreview(answersPreview, selectedAnswerFile, () => {
+        selectedAnswerFile = null;
         renderAnswerFiles();
       });
     }
@@ -172,14 +171,13 @@
     materialsInput.addEventListener("change", () => {
       const files = Array.from(materialsInput.files || []);
 
-      const existingNames = new Set(selectedMaterialFiles.map(file => file.name));
-      for (const file of files) {
-        if (!existingNames.has(file.name)) {
-          selectedMaterialFiles.push(file);
-        }
+      if (files.length > 1) {
+        alert("Practice mode accepts only one material file.");
       }
 
-      if (selectedMaterialFiles.length === 0) {
+      selectedMaterialFile = files.length ? files[0] : null;
+
+      if (!selectedMaterialFile) {
         materialsPreview.innerHTML = "";
         materialsInput.value = "";
         return;
@@ -196,14 +194,13 @@
     answersInput.addEventListener("change", () => {
       const files = Array.from(answersInput.files || []);
 
-      const existingNames = new Set(selectedAnswerFiles.map(file => file.name));
-      for (const file of files) {
-        if (!existingNames.has(file.name)) {
-          selectedAnswerFiles.push(file);
-        }
+      if (files.length > 1) {
+        alert("Practice mode accepts only one optional answer file.");
       }
 
-      if (selectedAnswerFiles.length === 0) {
+      selectedAnswerFile = files.length ? files[0] : null;
+
+      if (!selectedAnswerFile) {
         answersPreview.innerHTML = "";
         answersInput.value = "";
         return;
@@ -344,7 +341,7 @@
     });
 
     submitBtn.addEventListener("click", async () => {
-      if (selectedMaterialFiles.length === 0) {
+      if (!selectedMaterialFile) {
         alert("Please upload at least one material file.");
         return;
       }
@@ -377,8 +374,10 @@
         submitBtn.textContent = "Uploading...";
 
         const formData = new FormData();
-        selectedMaterialFiles.forEach(file => formData.append("question_file", file));
-        selectedAnswerFiles.forEach(file => formData.append("answer_file", file));
+        formData.append("question_file", selectedMaterialFile);
+        if (selectedAnswerFile) {
+          formData.append("answer_file", selectedAnswerFile);
+        }
 
         const response = await fetch(`${API_BASE}/courses/${selectedCourseId}/past_problems/upload`, {
           method: "POST",
@@ -399,7 +398,9 @@
           throw new Error(message);
         }
 
-        startPracticeMode({ persisted: true });
+        const payload = await response.json();
+        const problemId = payload?.data?.problem_id || null;
+        startPracticeMode({ persisted: true, problemId });
       } catch (error) {
         console.error("Error uploading practice files:", error);
         alert(error.message || "Upload failed.");

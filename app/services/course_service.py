@@ -1,6 +1,7 @@
 import os
 import time
 import uuid
+import json
 
 from supabase import Client
 
@@ -490,7 +491,6 @@ class CourseService:
             "user_id": user_id,
             "question": question_url,
             "answer": answer_url,
-            "llm_conversation": None,
         }
         try:
             response = self.client.table("past_problems").insert(record).execute()
@@ -509,6 +509,147 @@ class CourseService:
         if not data:
             raise CourseServiceError(500, "PAST_PROBLEM_CREATE_FAILED", "Past problem creation returned no data")
         return data[0]
+
+    @staticmethod
+    def _truncate_to_tokens(text: str, max_tokens: int) -> str:
+        parts = (text or "").strip().split()
+        if not parts:
+            return ""
+        return " ".join(parts[:max_tokens])
+
+    @staticmethod
+    def _is_boilerplate_ai_greeting(text: str) -> bool:
+        normalized = " ".join((text or "").strip().lower().split())
+        return normalized.startswith(
+            "hello! i'm ready to help you practice. please feel free to ask your question"
+        )
+
+    @staticmethod
+    def _is_redundant_ai_system_reply(text: str) -> bool:
+        normalized = " ".join((text or "").strip().lower().split())
+        blocked_messages = {
+            "tutor is temporarily rate-limited. please wait a moment and try again.",
+            "tutor service is temporarily unavailable. please try again shortly.",
+            "tutor configuration error. please contact support.",
+        }
+        return normalized in blocked_messages
+
+    def append_practice_llm_conversation(
+        self,
+        user_id: str,
+        course_id: str,
+        user_message: str,
+        ai_response: str,
+    ) -> None:
+        if not course_id:
+            return
+
+        response = (
+            self.client.table("courses")
+            .select("id, llm_conversation")
+            .eq("id", course_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+        if not rows:
+            raise CourseServiceError(404, "COURSE_NOT_FOUND", "Course not found")
+
+        existing = rows[0].get("llm_conversation")
+        conversation: list[dict[str, str]] = []
+        if isinstance(existing, str):
+            text = existing.strip()
+            if text:
+                try:
+                    loaded = json.loads(text)
+                    if isinstance(loaded, list):
+                        conversation = [item for item in loaded if isinstance(item, dict)]
+                except Exception:
+                    conversation = []
+
+        if self._is_boilerplate_ai_greeting(ai_response) or self._is_redundant_ai_system_reply(ai_response):
+            return
+
+        conversation.append(
+            {
+                "role": "user",
+                "content": self._truncate_to_tokens(user_message, 20),
+            }
+        )
+        conversation.append(
+            {
+                "role": "ai",
+                "content": self._truncate_to_tokens(ai_response, 30),
+            }
+        )
+
+        json_text = json.dumps(conversation, ensure_ascii=True)
+        try:
+            (
+                self.client.table("courses")
+                .update({"llm_conversation": json_text})
+                .eq("id", course_id)
+                .eq("user_id", user_id)
+                .execute()
+            )
+        except Exception as exc:
+            raise CourseServiceError(
+                500,
+                "COURSE_UPDATE_FAILED",
+                f"Failed to save course llm conversation: {exc}",
+            ) from exc
+
+    def get_course_llm_conversation(self, user_id: str, course_id: str) -> list[dict[str, str]]:
+        if not course_id:
+            return []
+
+        response = (
+            self.client.table("courses")
+            .select("id, llm_conversation")
+            .eq("id", course_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+        if not rows:
+            return []
+
+        raw = rows[0].get("llm_conversation")
+        if not isinstance(raw, str):
+            return []
+
+        text = raw.strip()
+        if not text:
+            return []
+
+        try:
+            loaded = json.loads(text)
+        except Exception:
+            return []
+
+        if not isinstance(loaded, list):
+            return []
+
+        return [item for item in loaded if isinstance(item, dict)]
+
+    def get_practice_problem(self, user_id: str, problem_id: str) -> dict:
+        response = (
+            self.client.table("past_problems")
+            .select("id, user_id, course_id, question, answer, created_at")
+            .eq("id", problem_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+
+        rows = response.data or []
+        if not rows:
+            raise CourseServiceError(404, "PAST_PROBLEM_NOT_FOUND", "Past problem not found")
+        return rows[0]
 
     def list_materials(self, user_id: str, course_id: str) -> list[CourseMaterial]:
         self._assert_course_owner(user_id, course_id)
@@ -548,15 +689,36 @@ class CourseService:
 
     @staticmethod
     def _serialize_material(row: dict) -> CourseMaterial:
+        storage_url = row.get("storage_url") or row.get("material")
+
+        filename = row.get("filename")
+        mime_type = row.get("mime_type")
+
+        # Backward compatibility: some rows store filename/mime inside text_material metadata.
+        text_material = row.get("text_material")
+        if isinstance(text_material, str) and text_material.startswith("filename="):
+            parts = text_material.split(";")
+            parsed: dict[str, str] = {}
+            for part in parts:
+                if "=" not in part:
+                    continue
+                key, value = part.split("=", 1)
+                parsed[key.strip()] = value.strip()
+
+            if not filename:
+                filename = parsed.get("filename")
+            if not mime_type:
+                mime_type = parsed.get("mime")
+
         return CourseMaterial(
             id=str(row["id"]),
             course_id=str(row["course_id"]),
             user_id=str(row["user_id"]),
             is_text=row["is_text"],
-            filename=row.get("filename"),
-            mime_type=row.get("mime_type"),
-            storage_url=row.get("storage_url"),
-            text_material=row.get("text_material"),  # Preview/full content for txt
+            filename=filename,
+            mime_type=mime_type,
+            storage_url=storage_url,
+            text_material=text_material,  # Preview/full content for txt
             created_at=row.get("created_at"),
         )
 

@@ -20,7 +20,6 @@ body {
   overflow: hidden;
 }
 
-/* ===== TOP ===== */
 .top-section {
   position: relative;
   width: 100%;
@@ -28,7 +27,6 @@ body {
   background-color: #bfbfbf;
 }
 
-/* time bar */
 .time-bar {
   position: absolute;
   top: 8px;
@@ -48,7 +46,6 @@ body {
   transition: width 1s linear;
 }
 
-/* timer */
 .timer {
   position: absolute;
   top: 34px;
@@ -60,22 +57,50 @@ body {
   color: #111;
 }
 
-/* ===== MAIN LAYOUT ===== */
 .main-content {
   display: flex;
   height: calc(100% - 85px);
 }
 
-/* ===== LEFT PDF ===== */
 .pdf-panel {
-  position: relative;
   width: 64%;
   background-color: #efefef;
+  display: flex;
+  flex-direction: column;
+}
+
+.material-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  background: #e2e2e2;
+  border-bottom: 1px solid #c8c8c8;
+}
+
+.material-tab {
+  border: 1px solid #b8b8b8;
+  background: #f2f2f2;
+  color: #222;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.material-tab.is-active {
+  background: #c9c9c9;
+  border-color: #9f9f9f;
+  font-weight: 700;
 }
 
 .pdf-placeholder {
   width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86,53 +111,56 @@ body {
   color: #555;
 }
 
-/* triangles */
-.nav-btn {
-  position: absolute;
-  bottom: 24px;
-  width: 0;
-  height: 0;
-  cursor: pointer;
-  border: none;
+.material-frame {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #c8c8c8;
+  background: #fff;
 }
 
-.nav-left {
-  left: 20px;
-  border-top: 24px solid transparent;
-  border-bottom: 24px solid transparent;
-  border-right: 36px solid #8c8c8c;
+.material-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
-.nav-right {
-  right: 20px;
-  border-top: 24px solid transparent;
-  border-bottom: 24px solid transparent;
-  border-left: 36px solid #8c8c8c;
+.material-fallback {
+  font-size: 20px;
 }
 
-/* ===== RIGHT PANEL ===== */
+.material-fallback a {
+  color: #333;
+  text-decoration: underline;
+}
+
 .right-panel {
   width: 36%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background-color: #d3d3d3;
 }
 
-/* AI section */
 .character-section {
-  height: 230px;
-  background-color: #bfbfbf;
+  width: 100%;
+  height: 120px;
+  background-color: #c7c7c7;
   display: flex;
   justify-content: center;
   align-items: center;
+  border-bottom: 1px solid #b8b8b8;
 }
 
 .ai-character {
-  width: 140px;
-  height: 140px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   overflow: hidden;
   background-color: #f4f4f4;
+  border: 1px solid #b0b0b0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .ai-character img {
@@ -141,7 +169,6 @@ body {
   object-fit: cover;
 }
 
-/* chat */
 .chat-box {
   flex: 1;
   background-color: #d9d9d9;
@@ -149,31 +176,45 @@ body {
   padding: 18px;
 }
 
-.session-summary {
-  font-family: 'Almendra', serif;
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-message {
+  display: flex;
+}
+
+.chat-message-user {
+  justify-content: flex-end;
+}
+
+.chat-message-assistant {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 85%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-message-user .chat-bubble {
+  background: #f2f2f2;
   color: #111;
 }
 
-.session-summary h3 {
-  font-size: 28px;
-  margin-bottom: 10px;
+.chat-message-assistant .chat-bubble {
+  background: #c7c7c7;
+  color: #111;
 }
 
-.session-summary p {
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.session-summary ul {
-  margin: 0 0 14px 18px;
-}
-
-.session-summary li {
-  font-size: 17px;
-  margin-bottom: 6px;
-}
-
-/* input */
 .input-area {
   position: relative;
   height: 120px;
@@ -190,6 +231,11 @@ body {
   padding: 18px 70px 18px 16px;
   font-size: 18px;
   font-family: 'Almendra', serif;
+  color: #111;
+}
+
+.input-area textarea::placeholder {
+  color: #333;
 }
 
 .send-btn {
@@ -202,5 +248,7 @@ body {
   border-radius: 50%;
   background-color: #ececec;
   font-size: 22px;
+  line-height: 1;
   cursor: pointer;
+  color: #111;
 }

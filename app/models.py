@@ -53,6 +53,7 @@ class LeaderboardResponse(BaseModel):
 
 class MessageData(BaseModel):
     action: str
+    problem_id: str | None = None
 
 
 class MessageResponse(BaseModel):
@@ -178,3 +179,42 @@ class ConfirmUploadRequest(BaseModel):
     mime_type: str = Field(min_length=1, max_length=200)
 
     model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class PracticeChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    material_files: list[str] = Field(default_factory=list, max_length=20)
+    problem_id: str | None = Field(default=None, max_length=100)
+    course_id: str | None = Field(default=None, max_length=100)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class PracticeChatData(BaseModel):
+    reply: str
+
+
+class PracticeChatResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: PracticeChatData | None = None
+    error: ErrorDetail | None = None
+
+
+class StudyChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    material_files: list[str] = Field(default_factory=list, max_length=50)
+    course_id: str | None = Field(default=None, max_length=100)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class StudyChatData(BaseModel):
+    reply: str
+
+
+class StudyChatResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: StudyChatData | None = None
+    error: ErrorDetail | None = None

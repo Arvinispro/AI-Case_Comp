@@ -25,34 +25,29 @@
 
       <!-- Left PDF viewer -->
       <div class="pdf-panel">
+        <div class="material-tabs" id="materialTabs"></div>
         <div class="pdf-placeholder" id="pdfPlaceholder"></div>
-
-        <button class="nav-btn nav-left" aria-label="Previous page"></button>
-        <button class="nav-btn nav-right" aria-label="Next page"></button>
       </div>
 
       <!-- Right side -->
       <div class="right-panel">
 
-        <!-- AI area -->
+        <!-- AI area (compact) -->
         <div class="character-section">
           <div class="ai-character">
-            <!-- replace this image later -->
-            <img src="https://via.placeholder.com/180" alt="AI character">
+            <img src="https://via.placeholder.com/120" alt="AI character">
           </div>
-
-          <button class="hint-btn">Hint</button>
         </div>
 
         <!-- Chat history -->
         <div class="chat-box" id="chatBox">
-          <div class="session-summary" id="sessionSummary"></div>
+          <div class="chat-messages" id="chatMessages"></div>
         </div>
 
         <!-- Input -->
         <div class="input-area">
-          <textarea placeholder="Start typing..."></textarea>
-          <button class="send-btn" aria-label="Send">↑</button>
+          <textarea id="chatInput" placeholder="Start typing..."></textarea>
+          <button class="send-btn" id="sendBtn" aria-label="Send">↑</button>
         </div>
 
       </div>
@@ -60,49 +55,296 @@
   </div>
 
   <script>
-    const sessionSummary = document.getElementById("sessionSummary");
     const pdfPlaceholder = document.getElementById("pdfPlaceholder");
+    const materialTabs = document.getElementById("materialTabs");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
 
-    function renderSessionSummary() {
-      const raw = sessionStorage.getItem("practice_mode_session");
-      if (!raw) {
-        sessionSummary.innerHTML = "<p>No uploaded practice session found yet.</p>";
-        pdfPlaceholder.textContent = "Upload a practice file to start.";
-        return;
-      }
+    let materials = [];
+    let activeMaterialIndex = 0;
 
-      let session;
-      try {
-        session = JSON.parse(raw);
-      } catch (_) {
-        sessionSummary.innerHTML = "<p>Practice session data could not be loaded.</p>";
-        pdfPlaceholder.textContent = "Session unavailable.";
-        return;
-      }
-
-      const materialList = (session.materialFiles || []).length
-        ? session.materialFiles.map((name) => `<li>${name}</li>`).join("")
-        : "<li>No material files</li>";
-
-      const answerList = (session.answerFiles || []).length
-        ? session.answerFiles.map((name) => `<li>${name}</li>`).join("")
-        : "<li>No answer files</li>";
-
-      sessionSummary.innerHTML = `
-        <h3>${session.courseName || "Practice session"}</h3>
-        <p>${session.persisted ? "Files uploaded to your current system." : "Learn-only session started without saving files."}</p>
-        <p><strong>Materials</strong></p>
-        <ul>${materialList}</ul>
-        <p><strong>Answers</strong></p>
-        <ul>${answerList}</ul>
-      `;
-
-      pdfPlaceholder.textContent = session.materialFiles && session.materialFiles.length
-        ? session.materialFiles[0]
-        : "Practice materials will appear here.";
+    function getAuthToken() {
+      return localStorage.getItem("auth_token");
     }
 
-    renderSessionSummary();
+    function appendChatMessage(role, text) {
+      const item = document.createElement("div");
+      item.className = `chat-message chat-message-${role}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "chat-bubble";
+      bubble.textContent = text;
+
+      item.appendChild(bubble);
+      chatMessages.appendChild(item);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function getSessionMaterialFiles() {
+      const raw = sessionStorage.getItem("practice_mode_session");
+      if (!raw) {
+        return [];
+      }
+      try {
+        const session = JSON.parse(raw);
+        return Array.isArray(session.materialFiles) ? session.materialFiles : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function getSessionAnswerFiles() {
+      const raw = sessionStorage.getItem("practice_mode_session");
+      if (!raw) {
+        return [];
+      }
+      try {
+        const session = JSON.parse(raw);
+        return Array.isArray(session.answerFiles) ? session.answerFiles : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function getPracticeProblemId() {
+      const raw = sessionStorage.getItem("practice_mode_session");
+      if (!raw) {
+        return null;
+      }
+      try {
+        const session = JSON.parse(raw);
+        return session?.problemId || null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function getPracticeCourseId() {
+      const raw = sessionStorage.getItem("practice_mode_session");
+      if (!raw) {
+        return null;
+      }
+      try {
+        const session = JSON.parse(raw);
+        return session?.courseId || null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function sendChatMessage() {
+      const message = chatInput.value.trim();
+      if (!message) {
+        return;
+      }
+
+      const token = getAuthToken();
+      if (!token) {
+        appendChatMessage("assistant", "Please sign in to chat.");
+        return;
+      }
+
+      appendChatMessage("user", message);
+      chatInput.value = "";
+      sendBtn.disabled = true;
+
+      try {
+        const response = await fetch("/api/v1/practice/chat", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message,
+            material_files: getSessionMaterialFiles(),
+            problem_id: getPracticeProblemId(),
+            course_id: getPracticeCourseId()
+          })
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          const errorMsg = payload?.message || "Chat request failed.";
+          appendChatMessage("assistant", errorMsg);
+          return;
+        }
+
+        const payload = await response.json();
+        const reply = payload?.data?.reply || "I could not generate a response right now.";
+        appendChatMessage("assistant", reply);
+      } catch (_) {
+        appendChatMessage("assistant", "Unable to reach the tutor service. Please try again.");
+      } finally {
+        sendBtn.disabled = false;
+        chatInput.focus();
+      }
+    }
+
+    function getFileExtension(name = "") {
+      const parts = name.toLowerCase().split(".");
+      return parts.length > 1 ? parts.pop() : "";
+    }
+
+    function escapeHtml(value = "") {
+      return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function renderMaterialTabs() {
+      if (!materialTabs) {
+        return;
+      }
+
+      materialTabs.innerHTML = "";
+      if (!materials.length) {
+        return;
+      }
+
+      materials.forEach((material, index) => {
+        const tab = document.createElement("button");
+        tab.type = "button";
+        tab.className = `material-tab${index === activeMaterialIndex ? " is-active" : ""}`;
+
+        const lowerName = (material.filename || "").toLowerCase();
+        const kind = lowerName.includes("answer") ? "Answer" : "Question";
+        tab.textContent = `${kind}: ${material.filename || "Material"}`;
+
+        tab.addEventListener("click", () => {
+          activeMaterialIndex = index;
+          renderMaterialTabs();
+          renderMaterialViewer();
+        });
+
+        materialTabs.appendChild(tab);
+      });
+    }
+
+    function renderMaterialViewer() {
+      if (!materials.length) {
+        pdfPlaceholder.innerHTML = "Practice materials will appear here.";
+        if (materialTabs) {
+          materialTabs.innerHTML = "";
+        }
+        return;
+      }
+
+      if (activeMaterialIndex < 0 || activeMaterialIndex >= materials.length) {
+        activeMaterialIndex = 0;
+      }
+
+      const material = materials[activeMaterialIndex];
+      const url = material.storage_url || "";
+      const filename = material.filename || "Material";
+      const mimeType = (material.mime_type || "").toLowerCase();
+      const extension = getFileExtension(filename);
+
+      const isPdf = mimeType.includes("pdf") || extension === "pdf";
+      const isImage = mimeType.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp"].includes(extension);
+
+      if (!url) {
+        pdfPlaceholder.innerHTML = "Missing file URL";
+        return;
+      }
+
+      if (isImage) {
+        pdfPlaceholder.innerHTML = `
+          <img class="material-image" src="${url}" alt="${escapeHtml(filename)}" />
+        `;
+      } else if (isPdf) {
+        const viewerUrl = `${url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`;
+        pdfPlaceholder.innerHTML = `
+          <iframe class="material-frame" src="${viewerUrl}" title="${escapeHtml(filename)}"></iframe>
+        `;
+      } else {
+        pdfPlaceholder.innerHTML = `
+          <div class="material-fallback">
+            <p>Preview unavailable for this file type.</p>
+            <a href="${url}" target="_blank" rel="noopener noreferrer">Open file</a>
+          </div>
+        `;
+      }
+    }
+
+    async function loadSessionMaterials() {
+      const token = getAuthToken();
+      if (!token) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/v1/practice/materials/session", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        const loaded = payload?.data || [];
+
+        const materialNames = getSessionMaterialFiles();
+        const answerNames = getSessionAnswerFiles();
+        const wantedNames = [...materialNames, ...answerNames]
+          .map((name) => (name || "").trim().toLowerCase())
+          .filter(Boolean);
+
+        if (wantedNames.length) {
+          const bucket = new Map();
+          loaded.forEach((item) => {
+            const key = (item?.filename || "").trim().toLowerCase();
+            if (!key) {
+              return;
+            }
+            if (!bucket.has(key)) {
+              bucket.set(key, []);
+            }
+            bucket.get(key).push(item);
+          });
+
+          const resolved = [];
+          wantedNames.forEach((name) => {
+            const items = bucket.get(name) || [];
+            if (items.length > 0) {
+              resolved.push(items.shift());
+            }
+          });
+
+          materials = resolved;
+        } else {
+          materials = [];
+        }
+      } catch (_) {
+        materials = [];
+      }
+    }
+
+    async function init() {
+      await loadSessionMaterials();
+      renderMaterialTabs();
+      renderMaterialViewer();
+      appendChatMessage("assistant", "Hi, I am your practice tutor. Ask me anything about this problem.");
+    }
+
+    sendBtn.addEventListener("click", sendChatMessage);
+    chatInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendChatMessage();
+      }
+    });
+
+    init();
   </script>
 </body>
 
