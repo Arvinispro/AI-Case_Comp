@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import FileResponse, RedirectResponse
 
-from app.dependencies import get_course_service, get_current_user_id
+from app.dependencies import get_course_service, get_current_user_id, get_session_material_store
 from app.exceptions import CourseServiceError
 from app.models import (
     CourseCreate,
@@ -17,6 +17,7 @@ from app.models import (
     MessageResponse,
 )
 from app.services.course_service import ALLOWED_EXTENSIONS, CourseService
+from app.services.session_material_store import SessionMaterialStore
 
 page_router = APIRouter(tags=["practice-pages"])
 router = APIRouter(prefix="/practice", tags=["practice"])
@@ -71,8 +72,10 @@ def upload_practice_text_material(
     payload: CourseMaterialCreate,
     user_id: str = Depends(get_current_user_id),
     course_service: CourseService = Depends(get_course_service),
+    session_material_store: SessionMaterialStore = Depends(get_session_material_store),
 ) -> CourseMaterialResponse:
     data = course_service.add_text_material(user_id, course_id, payload)
+    session_material_store.add_material(user_id, data)
     return CourseMaterialResponse(success=True, message="Practice text material uploaded", data=data)
 
 
@@ -86,6 +89,7 @@ def upload_practice_file_material(
     file: UploadFile = File(..., description="Practice material upload"),
     user_id: str = Depends(get_current_user_id),
     course_service: CourseService = Depends(get_course_service),
+    session_material_store: SessionMaterialStore = Depends(get_session_material_store),
 ) -> CourseMaterialResponse:
     filename = file.filename or "upload"
     ext = os.path.splitext(filename)[1].lower()
@@ -102,6 +106,7 @@ def upload_practice_file_material(
 
     mime_type = file.content_type or "application/octet-stream"
     data = course_service.add_file_material(user_id, course_id, file_bytes, filename, mime_type)
+    session_material_store.add_material(user_id, data)
     return CourseMaterialResponse(success=True, message=f"'{filename}' uploaded successfully", data=data)
 
 
@@ -113,6 +118,15 @@ def list_practice_materials(
 ) -> CourseMaterialsResponse:
     data = course_service.list_materials(user_id, course_id)
     return CourseMaterialsResponse(success=True, message="Practice materials retrieved", data=data)
+
+
+@router.get("/materials/session", response_model=CourseMaterialsResponse)
+def list_session_practice_materials(
+    user_id: str = Depends(get_current_user_id),
+    session_material_store: SessionMaterialStore = Depends(get_session_material_store),
+) -> CourseMaterialsResponse:
+    data = session_material_store.list_materials(user_id)
+    return CourseMaterialsResponse(success=True, message="Session materials retrieved", data=data)
 
 
 @router.get("/courses/{course_id}/materials/{material_id}/download")
