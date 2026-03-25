@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study AI Tutor</title>
+  <link rel="stylesheet" href="/frontend/studymode/studyaitutor.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="screen">
+
+    <!-- TOP -->
+    <div class="top-section">
+      <div class="time-bar">
+        <div class="time-fill"></div>
+      </div>
+      <div class="timer">00:00</div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+
+      <!-- LEFT PDF -->
+      <div class="pdf-panel">
+        <div class="pdf-placeholder" id="pdfPlaceholder"></div>
+
+        <button class="nav-btn nav-left"></button>
+        <button class="nav-btn nav-right"></button>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+
+        <!-- AI CHARACTER -->
+        <div class="character-section">
+          <div class="ai-character">
+            <img src="https://via.placeholder.com/180" alt="AI character">
+          </div>
+        </div>
+
+        <!-- CHAT -->
+        <div class="chat-box">
+          <div class="session-summary" id="sessionSummary"></div>
+        </div>
+
+        <!-- INPUT -->
+        <div class="input-area">
+          <textarea placeholder="Start typing..."></textarea>
+          <button class="send-btn">↑</button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const sessionSummary = document.getElementById("sessionSummary");
+    const pdfPlaceholder = document.getElementById("pdfPlaceholder");
+
+    function renderStudySession() {
+      const raw = sessionStorage.getItem("study_mode_session");
+      if (!raw) {
+        sessionSummary.innerHTML = "<p>No uploaded study session found yet.</p>";
+        pdfPlaceholder.textContent = "Upload a study file to start.";
+        return;
+      }
+
+      let session;
+      try {
+        session = JSON.parse(raw);
+      } catch (_) {
+        sessionSummary.innerHTML = "<p>Study session data could not be loaded.</p>";
+        pdfPlaceholder.textContent = "Session unavailable.";
+        return;
+      }
+
+      const materialList = (session.materialFiles || []).length
+        ? session.materialFiles.map((name) => `<li>${name}</li>`).join("")
+        : "<li>No material files</li>";
+
+      sessionSummary.innerHTML = `
+      <h3>${session.courseName || "Study session"}</h3>
+      <p>${session.persisted ? "Files uploaded to your current system." : "Learn-only session started without saving files."}</p>
+      <p><strong>Materials</strong></p>
+      <ul>${materialList}</ul>
+    `;
+
+      pdfPlaceholder.textContent = session.materialFiles && session.materialFiles.length
+        ? session.materialFiles[0]
+        : "Study materials will appear here.";
+    }
+
+    renderStudySession();
+  </script>
+
+</body>
+
+</html>

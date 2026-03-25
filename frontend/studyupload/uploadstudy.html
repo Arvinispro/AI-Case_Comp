@@ -55,6 +55,7 @@
 
   <script>
     const API_BASE = "/api/v1/study";
+    const STUDY_MODE_URL = "/frontend/studymode/studyaitutor.html";
     const uploadBtn = document.getElementById("uploadBtn");
     const fileInput = document.getElementById("fileInput");
     const uploadedFiles = document.getElementById("uploadedFiles");
@@ -76,6 +77,21 @@
     // Get auth token from localStorage
     function getAuthToken() {
       return localStorage.getItem("auth_token");
+    }
+
+    function startStudyMode({ persisted }) {
+      const typedCourse = courseInput.value.trim();
+      const selectedCourseName = typedCourse || (selectedCourseId ? dropdownBtn.textContent.trim() : "Study session");
+
+      sessionStorage.setItem("study_mode_session", JSON.stringify({
+        courseId: selectedCourseId,
+        courseName: selectedCourseName,
+        persisted,
+        materialFiles: selectedFiles.map((file) => file.name),
+        startedAt: new Date().toISOString()
+      }));
+
+      window.location.href = STUDY_MODE_URL;
     }
 
     // Fetch all courses from backend
@@ -318,12 +334,7 @@
 
       // If learn-only mode is selected and no course name was provided, do not store files.
       if (skipDatabaseSave && !courseNameInput) {
-        alert("Learn-only mode selected: files are not uploaded or saved.");
-        selectedFiles = [];
-        fileInput.value = "";
-        uploadedFiles.innerHTML = "";
-        courseInput.value = "";
-        submitBtn.textContent = "Submit";
+        startStudyMode({ persisted: false });
         return;
       }
 
@@ -405,19 +416,11 @@
           uploadedCount++;
         }
 
-        let successMessage = `${uploadedCount} of ${totalFiles} file(s) uploaded successfully`;
-        if (uploadedCount < totalFiles) {
-          successMessage += ` (${totalFiles - uploadedCount} failed)`;
+        if (uploadedCount === 0) {
+          throw new Error("No files were uploaded successfully.");
         }
-        successMessage += ` to ${dropdownBtn.textContent}!`;
 
-        alert(successMessage);
-        selectedFiles = [];
-        fileInput.value = "";
-        uploadedFiles.innerHTML = "";
-        courseInput.value = "";
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit";
+        startStudyMode({ persisted: true });
       } catch (error) {
         console.error("Error uploading files:", error);
         alert("Error uploading files: " + error.message);

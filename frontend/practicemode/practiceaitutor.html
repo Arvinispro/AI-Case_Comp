@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Practice AI Tutor</title>
+  <link rel="stylesheet" href="/frontend/practicemode/practiceaitutor.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="screen">
+
+    <!-- Top section -->
+    <div class="top-section">
+      <div class="time-bar">
+        <div class="time-fill"></div>
+      </div>
+      <div class="timer">00:00</div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+
+      <!-- Left PDF viewer -->
+      <div class="pdf-panel">
+        <div class="pdf-placeholder" id="pdfPlaceholder"></div>
+
+        <button class="nav-btn nav-left" aria-label="Previous page"></button>
+        <button class="nav-btn nav-right" aria-label="Next page"></button>
+      </div>
+
+      <!-- Right side -->
+      <div class="right-panel">
+
+        <!-- AI area -->
+        <div class="character-section">
+          <div class="ai-character">
+            <!-- replace this image later -->
+            <img src="https://via.placeholder.com/180" alt="AI character">
+          </div>
+
+          <button class="hint-btn">Hint</button>
+        </div>
+
+        <!-- Chat history -->
+        <div class="chat-box" id="chatBox">
+          <div class="session-summary" id="sessionSummary"></div>
+        </div>
+
+        <!-- Input -->
+        <div class="input-area">
+          <textarea placeholder="Start typing..."></textarea>
+          <button class="send-btn" aria-label="Send">↑</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sessionSummary = document.getElementById("sessionSummary");
+    const pdfPlaceholder = document.getElementById("pdfPlaceholder");
+
+    function renderSessionSummary() {
+      const raw = sessionStorage.getItem("practice_mode_session");
+      if (!raw) {
+        sessionSummary.innerHTML = "<p>No uploaded practice session found yet.</p>";
+        pdfPlaceholder.textContent = "Upload a practice file to start.";
+        return;
+      }
+
+      let session;
+      try {
+        session = JSON.parse(raw);
+      } catch (_) {
+        sessionSummary.innerHTML = "<p>Practice session data could not be loaded.</p>";
+        pdfPlaceholder.textContent = "Session unavailable.";
+        return;
+      }
+
+      const materialList = (session.materialFiles || []).length
+        ? session.materialFiles.map((name) => `<li>${name}</li>`).join("")
+        : "<li>No material files</li>";
+
+      const answerList = (session.answerFiles || []).length
+        ? session.answerFiles.map((name) => `<li>${name}</li>`).join("")
+        : "<li>No answer files</li>";
+
+      sessionSummary.innerHTML = `
+        <h3>${session.courseName || "Practice session"}</h3>
+        <p>${session.persisted ? "Files uploaded to your current system." : "Learn-only session started without saving files."}</p>
+        <p><strong>Materials</strong></p>
+        <ul>${materialList}</ul>
+        <p><strong>Answers</strong></p>
+        <ul>${answerList}</ul>
+      `;
+
+      pdfPlaceholder.textContent = session.materialFiles && session.materialFiles.length
+        ? session.materialFiles[0]
+        : "Practice materials will appear here.";
+    }
+
+    renderSessionSummary();
+  </script>
+</body>
+
+</html>

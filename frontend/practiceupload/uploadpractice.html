@@ -57,6 +57,7 @@
 
   <script>
     const API_BASE = "/api/v1/practice";
+    const PRACTICE_MODE_URL = "/frontend/practicemode/practiceaitutor.html";
     const uploadMaterialsBtn = document.getElementById("uploadMaterialsBtn");
     const materialsInput = document.getElementById("materialsInput");
     const materialsPreview = document.getElementById("materialsPreview");
@@ -82,6 +83,22 @@
 
     function getAuthToken() {
       return localStorage.getItem("auth_token");
+    }
+
+    function startPracticeMode({ persisted }) {
+      const typedCourse = courseInput.value.trim();
+      const selectedCourseName = typedCourse || (selectedCourseId ? dropdownBtn.textContent.trim() : "Practice session");
+
+      sessionStorage.setItem("practice_mode_session", JSON.stringify({
+        courseId: selectedCourseId,
+        courseName: selectedCourseName,
+        persisted,
+        materialFiles: selectedMaterialFiles.map((file) => file.name),
+        answerFiles: selectedAnswerFiles.map((file) => file.name),
+        startedAt: new Date().toISOString()
+      }));
+
+      window.location.href = PRACTICE_MODE_URL;
     }
 
     async function loadCourses() {
@@ -346,15 +363,7 @@
 
       // If learn-only mode is selected and no course name was provided, do not store files.
       if (skipDatabaseSave && !typedCourse) {
-        alert("Learn-only mode selected: files are not uploaded or saved.");
-        selectedMaterialFiles = [];
-        selectedAnswerFiles = [];
-        materialsInput.value = "";
-        answersInput.value = "";
-        renderMaterialFiles();
-        renderAnswerFiles();
-        courseInput.value = "";
-        submitBtn.textContent = "Submit";
+        startPracticeMode({ persisted: false });
         return;
       }
 
@@ -390,14 +399,7 @@
           throw new Error(message);
         }
 
-        alert("Practice files uploaded successfully.");
-        selectedMaterialFiles = [];
-        selectedAnswerFiles = [];
-        materialsInput.value = "";
-        answersInput.value = "";
-        renderMaterialFiles();
-        renderAnswerFiles();
-        courseInput.value = "";
+        startPracticeMode({ persisted: true });
       } catch (error) {
         console.error("Error uploading practice files:", error);
         alert(error.message || "Upload failed.");
