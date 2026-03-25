@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Mode</title>
+  <link rel="stylesheet" href="/frontend/studyupload/uploadstudy.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+
+
+<body>
+  <div class="screen">
+    <a href="/account" class="back-link">&larr; Back</a>
+    <div class="top-notes">
+      <div class="note-line">Upload files and create courses for study</div>
+      <div class="note-line">You can add course names, upload files,</div>
+      <div class="note-line">and choose a saved course from the dropdown</div>
+    </div>
+
+    <h1 class="title">Study mode</h1>
+
+    <div class="main-ui">
+      <div class="left-panel">
+        <button class="ui-btn" id="uploadBtn">Upload materials</button>
+        <input type="file" id="fileInput" class="hidden-file-input" multiple>
+        <div class="uploaded-files" id="uploadedFiles"></div>
+
+        <div class="create-course-wrap">
+
+          <input type="text" id="courseInput" class="text-input" placeholder="Create course">
+          <button class="plus-btn" id="addCourseBtn" type="button">+</button>
+        </div>
+
+        <div class="course-list-preview" id="coursePreview"></div>
+
+        <div class="or-text">or</div>
+
+        <div class="dropdown" id="courseDropdown">
+          <button class="dropdown-btn" id="dropdownBtn" type="button">
+            Course selection
+          </button>
+          <div class="dropdown-menu" id="dropdownMenu">
+
+          </div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <button class="submit-btn" id="submitBtn" type="button">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "/api/v1/study";
+    const uploadBtn = document.getElementById("uploadBtn");
+    const fileInput = document.getElementById("fileInput");
+    const uploadedFiles = document.getElementById("uploadedFiles");
+
+    const addCourseBtn = document.getElementById("addCourseBtn");
+    const courseInput = document.getElementById("courseInput");
+    const coursePreview = document.getElementById("coursePreview");
+
+    const dropdown = document.getElementById("courseDropdown");
+    const dropdownBtn = document.getElementById("dropdownBtn");
+    const dropdownMenu = document.getElementById("dropdownMenu");
+    const submitBtn = document.getElementById("submitBtn");
+
+    let selectedFiles = [];
+    let allCourses = [];
+    let selectedCourseId = null;
+    let skipDatabaseSave = false;
+
+    // Get auth token from localStorage
+    function getAuthToken() {
+      return localStorage.getItem("auth_token");
+    }
+
+    // Fetch all courses from backend
+    async function loadCourses() {
+      try {
+        const response = await fetch(`${API_BASE}/courses`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load courses: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        allCourses = data.data || [];
+        renderDropdownItems();
+      } catch (error) {
+        console.error("Error loading courses:", error);
+      }
+    }
+
+    // Upload button triggers file input
+    uploadBtn.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    function renderSelectedFiles() {
+      uploadedFiles.innerHTML = "";
+
+      if (selectedFiles.length === 0) {
+        return;
+      }
+
+      selectedFiles.forEach((file, index) => {
+        const chip = document.createElement("span");
+        chip.className = "file-chip";
+
+        const name = document.createElement("span");
+        name.className = "file-chip-name";
+        name.textContent = file.name;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "file-remove-btn";
+        removeBtn.textContent = "x";
+        removeBtn.setAttribute("aria-label", `Remove ${file.name}`);
+        removeBtn.addEventListener("click", () => {
+          selectedFiles.splice(index, 1);
+          renderSelectedFiles();
+        });
+
+        chip.appendChild(name);
+        chip.appendChild(removeBtn);
+        uploadedFiles.appendChild(chip);
+      });
+    }
+
+    // File input change handler - append files instead of replacing
+    fileInput.addEventListener("change", () => {
+      const newFiles = Array.from(fileInput.files);
+
+      // Append new files to existing selection (avoid duplicates)
+      const existingNames = new Set(selectedFiles.map(f => f.name));
+      for (const file of newFiles) {
+        if (!existingNames.has(file.name)) {
+          selectedFiles.push(file);
+        }
+      }
+
+      if (selectedFiles.length === 0) {
+        uploadedFiles.innerHTML = "";
+        fileInput.value = ""; // Clear the input for next selection
+        return;
+      }
+
+      renderSelectedFiles();
+      fileInput.value = ""; // Clear the input after adding files to allow re-selection of same files
+    });
+
+    // Render dropdown items from backend courses
+    function renderDropdownItems() {
+      dropdownMenu.innerHTML = "";
+
+      const emptySelectionItem = document.createElement("button");
+      emptySelectionItem.type = "button";
+      emptySelectionItem.className = "dropdown-item";
+      emptySelectionItem.textContent = "No course (learn only)";
+      emptySelectionItem.addEventListener("click", () => {
+        selectedCourseId = null;
+        skipDatabaseSave = true;
+        dropdownBtn.textContent = "No course (learn only)";
+        coursePreview.textContent = "Learn-only mode: files will not be saved";
+        dropdown.classList.remove("open");
+      });
+      dropdownMenu.appendChild(emptySelectionItem);
+
+      if (allCourses.length === 0) {
+        const noCoursesItem = document.createElement("div");
+        noCoursesItem.className = "dropdown-item";
+        noCoursesItem.textContent = "No courses available";
+        noCoursesItem.style.pointerEvents = "none";
+        dropdownMenu.appendChild(noCoursesItem);
+        return;
+      }
+
+      allCourses.forEach(course => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "dropdown-item";
+        item.textContent = course.name;
+
+        item.addEventListener("click", () => {
+          dropdownBtn.textContent = course.name;
+          selectedCourseId = course.id;
+          skipDatabaseSave = false;
+          coursePreview.textContent = `Selected: ${course.name}`;
+          dropdown.classList.remove("open");
+        });
+
+        dropdownMenu.appendChild(item);
+      });
+    }
+
+    // Helper function to create or select a course
+    async function createOrSelectCourse(courseName) {
+      if (!courseName) return;
+
+      // Check if course with this name already exists
+      const existingCourse = allCourses.find(course => course.name.toLowerCase() === courseName.toLowerCase());
+
+      if (existingCourse) {
+        // Course already exists, just select it
+        selectedCourseId = existingCourse.id;
+        skipDatabaseSave = false;
+        dropdownBtn.textContent = existingCourse.name;
+        coursePreview.textContent = `Selected: ${existingCourse.name}`;
+        courseInput.value = "";
+        return true;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/courses`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: courseName,
+            details: ""
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create course: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const newCourse = data.data;
+
+        allCourses.push(newCourse);
+        selectedCourseId = newCourse.id;
+        skipDatabaseSave = false;
+        renderDropdownItems();
+        dropdownBtn.textContent = newCourse.name;
+        coursePreview.textContent = `Added: ${courseName}`;
+        courseInput.value = "";
+        return true;
+      } catch (error) {
+        console.error("Error creating course:", error);
+        coursePreview.textContent = "Error creating course";
+        return false;
+      }
+    }
+
+    // Add new course via API (optional button click)
+    addCourseBtn.addEventListener("click", async () => {
+      const newCourseName = courseInput.value.trim();
+      if (newCourseName === "") return;
+
+      await createOrSelectCourse(newCourseName);
+    });
+
+    // Enter key to add course
+    courseInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        addCourseBtn.click();
+      }
+    });
+
+    // In learn-only mode, typing a course name means files will be saved on submit.
+    courseInput.addEventListener("input", () => {
+      if (!skipDatabaseSave) {
+        return;
+      }
+
+      const typedCourse = courseInput.value.trim();
+      if (typedCourse) {
+        coursePreview.textContent = "You typed a course name. On submit, this will create/select a course and save files.";
+      } else {
+        coursePreview.textContent = "Learn-only mode: files will not be saved";
+      }
+    });
+
+    // Dropdown toggle
+    dropdownBtn.addEventListener("click", () => {
+      dropdown.classList.toggle("open");
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener("click", (e) => {
+      if (!dropdown.contains(e.target)) {
+        dropdown.classList.remove("open");
+      }
+    });
+
+    // Submit handler - upload files to selected course
+    submitBtn.addEventListener("click", async () => {
+      if (selectedFiles.length === 0) {
+        alert("Please select files to upload");
+        return;
+      }
+
+      // If user typed a course name, create/select it first.
+      const courseNameInput = courseInput.value.trim();
+      if (courseNameInput) {
+        if (skipDatabaseSave) {
+          coursePreview.textContent = "Course name detected. Files will be saved for this course.";
+        }
+        const success = await createOrSelectCourse(courseNameInput);
+        if (!success) {
+          alert("Failed to create course. Please try again.");
+          return;
+        }
+      }
+
+      // If learn-only mode is selected and no course name was provided, do not store files.
+      if (skipDatabaseSave && !courseNameInput) {
+        alert("Learn-only mode selected: files are not uploaded or saved.");
+        selectedFiles = [];
+        fileInput.value = "";
+        uploadedFiles.innerHTML = "";
+        courseInput.value = "";
+        submitBtn.textContent = "Submit";
+        return;
+      }
+
+      if (!selectedCourseId) {
+        alert("Please select a course, or choose 'No course (learn only)'.");
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        const totalFiles = selectedFiles.length;
+        let uploadedCount = 0;
+
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          submitBtn.textContent = `Uploading ${i + 1}/${totalFiles}: ${file.name}...`;
+
+          const mimeType = file.type || "application/octet-stream";
+
+          // Step 1: Get a signed upload URL from the backend (small JSON request).
+          let presignData;
+          try {
+            const presignResp = await fetch(`${API_BASE}/courses/${selectedCourseId}/materials/presign`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${getAuthToken()}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ filename: file.name, mime_type: mimeType })
+            });
+            if (!presignResp.ok) {
+              const err = await presignResp.json().catch(() => ({}));
+              console.error(`Failed to presign ${file.name}:`, err);
+              continue;
+            }
+            presignData = await presignResp.json();
+          } catch (err) {
+            console.error(`Presign request failed for ${file.name}:`, err);
+            continue;
+          }
+
+          const { storage_path, signed_url } = presignData;
+
+          // Step 2: Upload the file directly from the browser to Supabase (bypasses Python backend).
+          try {
+            const uploadResp = await fetch(signed_url, {
+              method: "PUT",
+              headers: { "Content-Type": mimeType },
+              body: file
+            });
+            if (!uploadResp.ok) {
+              console.error(`Direct upload failed for ${file.name}: HTTP ${uploadResp.status}`);
+              continue;
+            }
+          } catch (err) {
+            console.error(`Direct upload network error for ${file.name}:`, err);
+            continue;
+          }
+
+          // Step 3: Tell the backend to record the uploaded file in the DB.
+          try {
+            const confirmResp = await fetch(`${API_BASE}/courses/${selectedCourseId}/materials/confirm`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${getAuthToken()}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ storage_path, filename: file.name, mime_type: mimeType })
+            });
+            if (!confirmResp.ok) {
+              console.error(`Failed to confirm ${file.name}: ${confirmResp.statusText}`);
+              continue;
+            }
+          } catch (err) {
+            console.error(`Confirm request failed for ${file.name}:`, err);
+            continue;
+          }
+
+          uploadedCount++;
+        }
+
+        let successMessage = `${uploadedCount} of ${totalFiles} file(s) uploaded successfully`;
+        if (uploadedCount < totalFiles) {
+          successMessage += ` (${totalFiles - uploadedCount} failed)`;
+        }
+        successMessage += ` to ${dropdownBtn.textContent}!`;
+
+        alert(successMessage);
+        selectedFiles = [];
+        fileInput.value = "";
+        uploadedFiles.innerHTML = "";
+        courseInput.value = "";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit";
+      } catch (error) {
+        console.error("Error uploading files:", error);
+        alert("Error uploading files: " + error.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit";
+      }
+    });
+
+    // Load courses on page load
+    loadCourses();
+  </script>
+</body>
+
+</html>

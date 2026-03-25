@@ -14,20 +14,20 @@
         <main class="main-content">
             <div class="profile-card">
                 <!--Add in this for image later: <div class="avatar-box"> <img src="images/profile.png" alt="Profile picture"></div>-->
-                <div class="avatar-box"></div>
+                <div class="avatar-box" id="avatarBox"></div>
 
                 <div class="user-info">
                     <div class="info-row name-row">
                         <span class="info-label">Name</span>
-                        <span class="info-value">Player 1</span>
+                        <span class="info-value" id="profileName">Loading...</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Level</span>
-                        <span class="info-value">1</span>
+                        <span class="info-value" id="profileLevel">-</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Points</span>
-                        <span class="info-value">1</span>
+                        <span class="info-value" id="profilePoints">-</span>
                     </div>
                 </div>
             </div>
@@ -39,14 +39,14 @@
             </div>
 
             <div class="dropdown-menu" id="menu">
-                <a href="#">Profile</a>
+                <a href="/profile">Profile</a>
                 <a href="#">Settings</a>
                 <a href="#">Logout</a>
             </div>
 
             <div class="modes-container">
                 <div class="mode-item">
-                    <a href="/study-upload" class="mode-box">Study</a>
+                    <a href="/study" class="mode-box">Study</a>
                     <p class="mode-text">
                         Enter a focused learning mode where you can review materials, build knowledge,
                         and move through your study journey at your own pace.
@@ -54,7 +54,7 @@
                 </div>
 
                 <div class="mode-item">
-                    <a href="/practice-upload" class="mode-box">Practice</a>
+                    <a href="/practice" class="mode-box">Practice</a>
                     <p class="mode-text">
                         Test what you know with engaging challenges, strengthen your memory,
                         and improve your skills through repeated practice.
@@ -66,64 +66,106 @@
         <aside class="ranking-sidebar">
             <h2 class="ranking-title">Ranking</h2>
 
-            <div class="ranking-list">
-                <div class="rank-item">
-                    <span class="rank-number">1</span>
-                    <span class="rank-name">Arthur</span>
-                    <span class="rank-level">Lv. 20</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">2</span>
-                    <span class="rank-name">Luna</span>
-                    <span class="rank-level">Lv. 18</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">3</span>
-                    <span class="rank-name">Elio</span>
-                    <span class="rank-level">Lv. 17</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">4</span>
-                    <span class="rank-name">Mira</span>
-                    <span class="rank-level">Lv. 16</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">5</span>
-                    <span class="rank-name">Rowan</span>
-                    <span class="rank-level">Lv. 15</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">6</span>
-                    <span class="rank-name">Nia</span>
-                    <span class="rank-level">Lv. 14</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">7</span>
-                    <span class="rank-name">Cedric</span>
-                    <span class="rank-level">Lv. 13</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">8</span>
-                    <span class="rank-name">Iris</span>
-                    <span class="rank-level">Lv. 12</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">9</span>
-                    <span class="rank-name">Kai</span>
-                    <span class="rank-level">Lv. 11</span>
-                </div>
-                <div class="rank-item">
-                    <span class="rank-number">10</span>
-                    <span class="rank-name">Selene</span>
-                    <span class="rank-level">Lv. 10</span>
-                </div>
-            </div>
+            <div class="ranking-list" id="rankingList"></div>
         </aside>
     </div>
 
     <script>
         const menuIcon = document.getElementById("menuIcon");
         const menu = document.getElementById("menu");
+        const profileName = document.getElementById("profileName");
+        const profileLevel = document.getElementById("profileLevel");
+        const profilePoints = document.getElementById("profilePoints");
+        const rankingList = document.getElementById("rankingList");
+        const avatarBox = document.getElementById("avatarBox");
+
+        function applyProfilePicture(url) {
+            if (!url) {
+                avatarBox.style.backgroundImage = "";
+                return;
+            }
+            avatarBox.style.backgroundImage = `url("${url}")`;
+        }
+
+        async function loadCurrentUserProfile() {
+            const token = localStorage.getItem("auth_token");
+            if (!token) {
+                profileName.textContent = "Guest";
+                profileLevel.textContent = "-";
+                profilePoints.textContent = "-";
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/v1/auth/current_user", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch profile: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const user = payload?.data || {};
+
+                profileName.textContent = user.username || "User";
+                profileLevel.textContent = user.level ?? "-";
+                profilePoints.textContent = user.points ?? "-";
+                applyProfilePicture(user.profile_pic || "");
+            } catch (error) {
+                console.error("Failed to load current user profile:", error);
+                profileName.textContent = "User";
+                profileLevel.textContent = "-";
+                profilePoints.textContent = "-";
+                applyProfilePicture("");
+            }
+        }
+
+
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch("/api/v1/auth/leaderboard", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch leaderboard: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const leaderboard = payload?.data || [];
+
+                rankingList.innerHTML = "";
+                if (!leaderboard.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "rank-item";
+                    empty.innerHTML = '<span class="rank-name">No ranking data yet</span>';
+                    rankingList.appendChild(empty);
+                    return;
+                }
+
+                leaderboard.forEach((user, index) => {
+                    const item = document.createElement("div");
+                    item.className = "rank-item";
+                    item.innerHTML = `
+                        <span class="rank-number">${index + 1}</span>
+                        <span class="rank-name">${user.username}</span>
+                        <span class="rank-level">Lv. ${user.level ?? 0}</span>
+                    `;
+                    rankingList.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Failed to load leaderboard:", error);
+                rankingList.innerHTML = '<div class="rank-item"><span class="rank-name">Unable to load ranking</span></div>';
+            }
+        }
 
         menuIcon.addEventListener("click", function () {
             if (menu.style.display === "flex") {
@@ -138,6 +180,9 @@
                 menu.style.display = "none";
             }
         });
+
+        loadCurrentUserProfile();
+        loadLeaderboard();
     </script>
 </body>
 

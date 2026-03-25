@@ -11,7 +11,10 @@ from app.exceptions import AppError
 from app.models import ErrorDetail
 from app.routers.accountpage import router as account_router
 from app.routers.auth import router as auth_router
-from app.routers.upload import router as course_router
+from app.routers.practice import page_router as practice_page_router
+from app.routers.practice import router as practice_router
+from app.routers.study import page_router as study_page_router
+from app.routers.study import router as study_router
 
 settings = get_settings()
 BASE_DIR = Path(__file__).resolve().parent
@@ -20,14 +23,6 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-@app.get("/", include_in_schema=False)
-def root() -> FileResponse:
-    return FileResponse("static/index.html")
-
 
 @app.get("/", include_in_schema=False)
 def root() -> RedirectResponse:
@@ -40,7 +35,10 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
-app.include_router(course_router, prefix="/api/v1")
+app.include_router(study_router, prefix="/api/v1")
+app.include_router(practice_router, prefix="/api/v1")
+app.include_router(study_page_router)
+app.include_router(practice_page_router)
 app.include_router(account_router)
 
 app.mount("/frontend", StaticFiles(directory=BASE_DIR / "frontend"), name="frontend")

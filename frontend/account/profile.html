@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile</title>
+  <link rel="stylesheet" href="/frontend/account/profile.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="profile-page">
+    <div class="profile-card">
+      <h1>Profile Picture</h1>
+      <div class="avatar-preview" id="avatarPreview"></div>
+
+      <input type="file" id="profilePicInput" accept="image/png,image/jpeg,image/gif,image/webp" />
+      <button id="uploadBtn" type="button">Upload Picture</button>
+      <p id="statusText"></p>
+
+      <a href="/account" class="back-link">Back to Account</a>
+    </div>
+  </div>
+
+  <script>
+    const avatarPreview = document.getElementById("avatarPreview");
+    const profilePicInput = document.getElementById("profilePicInput");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const statusText = document.getElementById("statusText");
+
+    let selectedFile = null;
+
+    function setPreview(url) {
+      avatarPreview.style.backgroundImage = url ? `url("${url}")` : "";
+    }
+
+    async function loadCurrentUserProfile() {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        statusText.textContent = "Please sign in first.";
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/v1/auth/current_user", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch profile: ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const user = payload?.data || {};
+        setPreview(user.profile_pic || "");
+      } catch (error) {
+        console.error("Failed to load current user profile:", error);
+        statusText.textContent = "Unable to load current profile picture.";
+      }
+    }
+
+    profilePicInput.addEventListener("change", () => {
+      selectedFile = profilePicInput.files && profilePicInput.files[0] ? profilePicInput.files[0] : null;
+      if (!selectedFile) {
+        statusText.textContent = "";
+        return;
+      }
+      statusText.textContent = `Selected: ${selectedFile.name}`;
+    });
+
+    uploadBtn.addEventListener("click", async () => {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        statusText.textContent = "Please sign in first.";
+        return;
+      }
+
+      if (!selectedFile) {
+        statusText.textContent = "Choose a picture first.";
+        return;
+      }
+
+      try {
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = "Uploading...";
+        statusText.textContent = "Uploading profile picture...";
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const response = await fetch("/api/v1/auth/profile_pic", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          let errorMessage = `Failed to upload profile picture: ${response.status}`;
+          try {
+            const errorPayload = await response.json();
+            errorMessage = errorPayload?.message || errorPayload?.error?.message || errorMessage;
+          } catch (_) {
+            // Keep fallback message if response is not JSON.
+          }
+          throw new Error(errorMessage);
+        }
+
+        const payload = await response.json();
+        const user = payload?.data || {};
+        setPreview(user.profile_pic || "");
+        statusText.textContent = "Profile picture uploaded successfully.";
+        selectedFile = null;
+        profilePicInput.value = "";
+        setTimeout(() => {
+          window.location.href = "/account";
+        }, 500);
+      } catch (error) {
+        console.error("Failed to upload profile picture:", error);
+        statusText.textContent = error.message || "Upload failed. Please try again.";
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = "Upload Picture";
+      }
+    });
+
+    loadCurrentUserProfile();
+  </script>
+</body>
+
+</html>

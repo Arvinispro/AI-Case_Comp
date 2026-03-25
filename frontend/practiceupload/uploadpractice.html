@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Practice Mode</title>
+  <link rel="stylesheet" href="/frontend/practiceupload/uploadpractice.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="screen">
+    <a href="/account" class="back-link">&larr; Back</a>
+    <div class="top-notes">
+      <div class="note-line">Replace this with your instruction text</div>
+      <div class="note-line">You can upload materials and answers,</div>
+      <div class="note-line">then create or select a course</div>
+    </div>
+
+    <h1 class="title">Practice mode</h1>
+
+    <div class="upload-row">
+      <div class="upload-group">
+        <button class="ui-btn" id="uploadMaterialsBtn">Upload materials</button>
+        <input type="file" id="materialsInput" class="hidden-file-input" multiple>
+        <div class="file-preview" id="materialsPreview"></div>
+      </div>
+
+      <div class="upload-group">
+        <button class="ui-btn" id="uploadAnswersBtn">Upload answers</button>
+        <input type="file" id="answersInput" class="hidden-file-input" multiple>
+        <div class="file-preview" id="answersPreview"></div>
+      </div>
+    </div>
+
+    <div class="middle-panel">
+      <div class="create-course-wrap">
+        <input type="text" id="courseInput" class="text-input" placeholder="Create course">
+        <button class="plus-btn" id="addCourseBtn" type="button">+</button>
+      </div>
+
+      <div class="course-list-preview" id="coursePreview"></div>
+
+      <div class="or-text">or</div>
+
+      <div class="dropdown" id="courseDropdown">
+        <button class="dropdown-btn" id="dropdownBtn" type="button">
+          Course selection
+        </button>
+        <div class="dropdown-menu" id="dropdownMenu"></div>
+      </div>
+
+      <button class="ui-btn" id="submitBtn" type="button">Submit</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "/api/v1/practice";
+    const uploadMaterialsBtn = document.getElementById("uploadMaterialsBtn");
+    const materialsInput = document.getElementById("materialsInput");
+    const materialsPreview = document.getElementById("materialsPreview");
+
+    const uploadAnswersBtn = document.getElementById("uploadAnswersBtn");
+    const answersInput = document.getElementById("answersInput");
+    const answersPreview = document.getElementById("answersPreview");
+
+    const addCourseBtn = document.getElementById("addCourseBtn");
+    const courseInput = document.getElementById("courseInput");
+    const coursePreview = document.getElementById("coursePreview");
+
+    const dropdown = document.getElementById("courseDropdown");
+    const dropdownBtn = document.getElementById("dropdownBtn");
+    const dropdownMenu = document.getElementById("dropdownMenu");
+    const submitBtn = document.getElementById("submitBtn");
+
+    let selectedMaterialFiles = [];
+    let selectedAnswerFiles = [];
+    let allCourses = [];
+    let selectedCourseId = null;
+    let skipDatabaseSave = false;
+
+    function getAuthToken() {
+      return localStorage.getItem("auth_token");
+    }
+
+    async function loadCourses() {
+      try {
+        const response = await fetch(`${API_BASE}/courses`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load courses: ${response.statusText}`);
+        }
+
+        const payload = await response.json();
+        allCourses = payload.data || [];
+        renderDropdownItems();
+      } catch (error) {
+        console.error("Error loading courses:", error);
+      }
+    }
+
+    uploadMaterialsBtn.addEventListener("click", () => {
+      materialsInput.click();
+    });
+
+    function renderFilePreview(container, files, onRemove) {
+      container.innerHTML = "";
+
+      if (files.length === 0) {
+        return;
+      }
+
+      files.forEach((file, index) => {
+        const chip = document.createElement("span");
+        chip.className = "file-chip";
+
+        const name = document.createElement("span");
+        name.className = "file-chip-name";
+        name.textContent = file.name;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "file-remove-btn";
+        removeBtn.textContent = "x";
+        removeBtn.setAttribute("aria-label", `Remove ${file.name}`);
+        removeBtn.addEventListener("click", () => onRemove(index));
+
+        chip.appendChild(name);
+        chip.appendChild(removeBtn);
+        container.appendChild(chip);
+      });
+    }
+
+    function renderMaterialFiles() {
+      renderFilePreview(materialsPreview, selectedMaterialFiles, (index) => {
+        selectedMaterialFiles.splice(index, 1);
+        renderMaterialFiles();
+      });
+    }
+
+    function renderAnswerFiles() {
+      renderFilePreview(answersPreview, selectedAnswerFiles, (index) => {
+        selectedAnswerFiles.splice(index, 1);
+        renderAnswerFiles();
+      });
+    }
+
+    materialsInput.addEventListener("change", () => {
+      const files = Array.from(materialsInput.files || []);
+
+      const existingNames = new Set(selectedMaterialFiles.map(file => file.name));
+      for (const file of files) {
+        if (!existingNames.has(file.name)) {
+          selectedMaterialFiles.push(file);
+        }
+      }
+
+      if (selectedMaterialFiles.length === 0) {
+        materialsPreview.innerHTML = "";
+        materialsInput.value = "";
+        return;
+      }
+
+      renderMaterialFiles();
+      materialsInput.value = "";
+    });
+
+    uploadAnswersBtn.addEventListener("click", () => {
+      answersInput.click();
+    });
+
+    answersInput.addEventListener("change", () => {
+      const files = Array.from(answersInput.files || []);
+
+      const existingNames = new Set(selectedAnswerFiles.map(file => file.name));
+      for (const file of files) {
+        if (!existingNames.has(file.name)) {
+          selectedAnswerFiles.push(file);
+        }
+      }
+
+      if (selectedAnswerFiles.length === 0) {
+        answersPreview.innerHTML = "";
+        answersInput.value = "";
+        return;
+      }
+
+      renderAnswerFiles();
+      answersInput.value = "";
+    });
+
+    async function createOrSelectCourse(courseName) {
+      if (!courseName) {
+        return false;
+      }
+
+      const existing = allCourses.find(course => course.name.toLowerCase() === courseName.toLowerCase());
+      if (existing) {
+        selectedCourseId = existing.id;
+        skipDatabaseSave = false;
+        dropdownBtn.textContent = existing.name;
+        coursePreview.textContent = `Selected: ${existing.name}`;
+        courseInput.value = "";
+        return true;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/courses`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: courseName,
+            details: ""
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create course: ${response.statusText}`);
+        }
+
+        const payload = await response.json();
+        const createdCourse = payload.data;
+        allCourses.push(createdCourse);
+        selectedCourseId = createdCourse.id;
+        skipDatabaseSave = false;
+        dropdownBtn.textContent = createdCourse.name;
+        coursePreview.textContent = `Created: ${createdCourse.name}`;
+        courseInput.value = "";
+        renderDropdownItems();
+        return true;
+      } catch (error) {
+        console.error("Error creating course:", error);
+        coursePreview.textContent = "Error creating course";
+        return false;
+      }
+    }
+
+    function renderDropdownItems() {
+      dropdownMenu.innerHTML = "";
+
+      const emptySelectionItem = document.createElement("button");
+      emptySelectionItem.type = "button";
+      emptySelectionItem.className = "dropdown-item";
+      emptySelectionItem.textContent = "No course (learn only)";
+      emptySelectionItem.addEventListener("click", () => {
+        selectedCourseId = null;
+        skipDatabaseSave = true;
+        dropdownBtn.textContent = "No course (learn only)";
+        coursePreview.textContent = "Learn-only mode: files will not be saved";
+        dropdown.classList.remove("open");
+      });
+      dropdownMenu.appendChild(emptySelectionItem);
+
+      if (allCourses.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "dropdown-item";
+        empty.textContent = "No courses available";
+        empty.style.pointerEvents = "none";
+        dropdownMenu.appendChild(empty);
+        return;
+      }
+
+      allCourses.forEach(course => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "dropdown-item";
+        item.textContent = course.name;
+
+        item.addEventListener("click", () => {
+          dropdownBtn.textContent = course.name;
+          selectedCourseId = course.id;
+          skipDatabaseSave = false;
+          coursePreview.textContent = `Selected: ${course.name}`;
+          dropdown.classList.remove("open");
+        });
+
+        dropdownMenu.appendChild(item);
+      });
+    }
+
+    addCourseBtn.addEventListener("click", async () => {
+      const newCourse = courseInput.value.trim();
+
+      if (newCourse === "") return;
+
+      await createOrSelectCourse(newCourse);
+    });
+
+    courseInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        addCourseBtn.click();
+      }
+    });
+
+    // In learn-only mode, typing a course name means files will be saved on submit.
+    courseInput.addEventListener("input", () => {
+      if (!skipDatabaseSave) {
+        return;
+      }
+
+      const typedCourse = courseInput.value.trim();
+      if (typedCourse) {
+        coursePreview.textContent = "You typed a course name. On submit, this will create/select a course and save files.";
+      } else {
+        coursePreview.textContent = "Learn-only mode: files will not be saved";
+      }
+    });
+
+    dropdownBtn.addEventListener("click", () => {
+      dropdown.classList.toggle("open");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!dropdown.contains(e.target)) {
+        dropdown.classList.remove("open");
+      }
+    });
+
+    submitBtn.addEventListener("click", async () => {
+      if (selectedMaterialFiles.length === 0) {
+        alert("Please upload at least one material file.");
+        return;
+      }
+
+      const typedCourse = courseInput.value.trim();
+      if (typedCourse) {
+        if (skipDatabaseSave) {
+          coursePreview.textContent = "Course name detected. Files will be saved for this course.";
+        }
+        const success = await createOrSelectCourse(typedCourse);
+        if (!success) {
+          alert("Unable to create/select course.");
+          return;
+        }
+      }
+
+      // If learn-only mode is selected and no course name was provided, do not store files.
+      if (skipDatabaseSave && !typedCourse) {
+        alert("Learn-only mode selected: files are not uploaded or saved.");
+        selectedMaterialFiles = [];
+        selectedAnswerFiles = [];
+        materialsInput.value = "";
+        answersInput.value = "";
+        renderMaterialFiles();
+        renderAnswerFiles();
+        courseInput.value = "";
+        submitBtn.textContent = "Submit";
+        return;
+      }
+
+      if (!selectedCourseId) {
+        alert("Please create or select a course first.");
+        return;
+      }
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Uploading...";
+
+        const formData = new FormData();
+        selectedMaterialFiles.forEach(file => formData.append("question_file", file));
+        selectedAnswerFiles.forEach(file => formData.append("answer_file", file));
+
+        const response = await fetch(`${API_BASE}/courses/${selectedCourseId}/past_problems/upload`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${getAuthToken()}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          let message = `Upload failed: ${response.statusText}`;
+          try {
+            const errorPayload = await response.json();
+            message = errorPayload?.message || message;
+          } catch (_) {
+            // keep fallback message
+          }
+          throw new Error(message);
+        }
+
+        alert("Practice files uploaded successfully.");
+        selectedMaterialFiles = [];
+        selectedAnswerFiles = [];
+        materialsInput.value = "";
+        answersInput.value = "";
+        renderMaterialFiles();
+        renderAnswerFiles();
+        courseInput.value = "";
+      } catch (error) {
+        console.error("Error uploading practice files:", error);
+        alert(error.message || "Upload failed.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit";
+      }
+    });
+
+    loadCourses();
+  </script>
+</body>
+
+</html>
