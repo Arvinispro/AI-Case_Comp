@@ -3,13 +3,16 @@
 
 import os
 import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
 from google import genai
 
-load_dotenv()
+# Always load the workspace .env, even if the process starts from another directory.
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 api_key = os.getenv("GEMINI_API_KEY")
-ai_model = os.getenv("GEMINI_MODEL")
+ai_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 if not api_key:
     print("Missing GEMINI_API_KEY. Put it in your .env file.")

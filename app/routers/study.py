@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.dependencies import get_course_service, get_current_user_id, get_session_material_store
+from app.dependencies import get_chat_orchestrator_service, get_course_service, get_current_user_id, get_session_material_store
 from app.exceptions import CourseServiceError
 from app.models import (
 	ConfirmUploadRequest,
@@ -16,8 +16,12 @@ from app.models import (
 	CoursesResponse,
 	PresignRequest,
 	PresignResponse,
+	StudyChatData,
+	StudyChatRequest,
+	StudyChatResponse,
 )
 from app.services.course_service import ALLOWED_EXTENSIONS, CourseService
+from app.services.chat_orchestrator_service import ChatOrchestratorService
 from app.services.session_material_store import SessionMaterialStore
 
 page_router = APIRouter(tags=["study-pages"])
@@ -163,3 +167,20 @@ def list_session_study_materials(
 ) -> CourseMaterialsResponse:
 	data = session_material_store.list_materials(user_id)
 	return CourseMaterialsResponse(success=True, message="Session materials retrieved", data=data)
+
+
+@router.post("/chat", response_model=StudyChatResponse)
+def study_chat(
+	payload: StudyChatRequest,
+	user_id: str = Depends(get_current_user_id),
+	chat_orchestrator: ChatOrchestratorService = Depends(get_chat_orchestrator_service),
+) -> StudyChatResponse:
+	reply, _ = chat_orchestrator.generate_course_chat_reply(
+		user_id=user_id,
+		user_message=payload.message,
+		course_id=payload.course_id,
+		material_files=payload.material_files,
+		max_context_files=3,
+	)
+
+	return StudyChatResponse(success=True, message="Reply generated", data=StudyChatData(reply=reply))

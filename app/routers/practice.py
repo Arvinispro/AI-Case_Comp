@@ -4,9 +4,10 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import FileResponse, RedirectResponse
 
-from app.dependencies import get_course_service, get_current_user_id, get_session_material_store
+from app.dependencies import get_chat_orchestrator_service, get_course_service, get_current_user_id, get_session_material_store
 from app.exceptions import CourseServiceError
 from app.models import (
+    CourseMaterial,
     CourseCreate,
     CourseMaterialCreate,
     CourseMaterialResponse,
@@ -15,8 +16,12 @@ from app.models import (
     CoursesResponse,
     MessageData,
     MessageResponse,
+    PracticeChatData,
+    PracticeChatRequest,
+    PracticeChatResponse,
 )
 from app.services.course_service import ALLOWED_EXTENSIONS, CourseService
+from app.services.chat_orchestrator_service import ChatOrchestratorService
 from app.services.session_material_store import SessionMaterialStore
 
 page_router = APIRouter(tags=["practice-pages"])
@@ -129,6 +134,24 @@ def list_session_practice_materials(
     return CourseMaterialsResponse(success=True, message="Session materials retrieved", data=data)
 
 
+@router.post("/chat", response_model=PracticeChatResponse)
+def practice_chat(
+    payload: PracticeChatRequest,
+    user_id: str = Depends(get_current_user_id),
+    chat_orchestrator: ChatOrchestratorService = Depends(get_chat_orchestrator_service),
+) -> PracticeChatResponse:
+    reply, _ = chat_orchestrator.generate_course_chat_reply(
+        user_id=user_id,
+        user_message=payload.message,
+        course_id=payload.course_id,
+        material_files=payload.material_files,
+        problem_id=payload.problem_id,
+        max_context_files=1,
+    )
+
+    return PracticeChatResponse(success=True, message="Reply generated", data=PracticeChatData(reply=reply))
+
+
 @router.get("/courses/{course_id}/materials/{material_id}/download")
 def download_practice_material(
     course_id: str,
@@ -153,60 +176,101 @@ def upload_practice_past_problems(
     answer_file: list[UploadFile] | None = File(default=None, description="Optional answer files (saved to answer)"),
     user_id: str = Depends(get_current_user_id),
     course_service: CourseService = Depends(get_course_service),
+    session_material_store: SessionMaterialStore = Depends(get_session_material_store),
 ) -> MessageResponse:
     if not question_file:
         raise CourseServiceError(400, "MISSING_QUESTION_FILES", "At least one material file is required")
 
-    answer_file = answer_file or []
-    created_count = 0
+    if len(question_file) != 1:
+        raise CourseServiceError(400, "INVALID_QUESTION_FILE_COUNT", "Upload exactly one practice material file")
 
-    for index, q_file in enumerate(question_file):
-        q_filename = q_file.filename or "question_upload"
-        q_ext = os.path.splitext(q_filename)[1].lower()
-        if q_ext not in ALLOWED_EXTENSIONS:
+    answer_file = answer_file or []
+    if len(answer_file) > 1:
+        raise CourseServiceError(400, "INVALID_ANSWER_FILE_COUNT", "Upload at most one answer file")
+
+    q_file = question_file[0]
+    q_filename = q_file.filename or "question_upload"
+    q_ext = os.path.splitext(q_filename)[1].lower()
+    if q_ext not in ALLOWED_EXTENSIONS:
+        raise CourseServiceError(
+            415,
+            "UNSUPPORTED_FILE_TYPE",
+            f"Question extension '{q_ext}' is not allowed. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
+
+    q_bytes = q_file.file.read(_MAX_FILE_BYTES + 1)
+    if len(q_bytes) > _MAX_FILE_BYTES:
+        raise CourseServiceError(413, "FILE_TOO_LARGE", "Question file must be 50 MB or smaller")
+
+    a_bytes = None
+    a_filename = None
+    a_mime = None
+    if answer_file:
+        a_file = answer_file[0]
+        a_filename = a_file.filename or "answer_upload"
+        a_ext = os.path.splitext(a_filename)[1].lower()
+        if a_ext not in ALLOWED_EXTENSIONS:
             raise CourseServiceError(
                 415,
                 "UNSUPPORTED_FILE_TYPE",
-                f"Question extension '{q_ext}' is not allowed. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+                f"Answer extension '{a_ext}' is not allowed. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
             )
 
-        q_bytes = q_file.file.read(_MAX_FILE_BYTES + 1)
-        if len(q_bytes) > _MAX_FILE_BYTES:
-            raise CourseServiceError(413, "FILE_TOO_LARGE", "Question file must be 50 MB or smaller")
+        a_bytes = a_file.file.read(_MAX_FILE_BYTES + 1)
+        if len(a_bytes) > _MAX_FILE_BYTES:
+            raise CourseServiceError(413, "FILE_TOO_LARGE", "Answer file must be 50 MB or smaller")
+        a_mime = a_file.content_type or "application/octet-stream"
 
-        a_bytes = None
-        a_filename = None
-        a_mime = None
-        if index < len(answer_file):
-            a_file = answer_file[index]
-            a_filename = a_file.filename or "answer_upload"
-            a_ext = os.path.splitext(a_filename)[1].lower()
-            if a_ext not in ALLOWED_EXTENSIONS:
-                raise CourseServiceError(
-                    415,
-                    "UNSUPPORTED_FILE_TYPE",
-                    f"Answer extension '{a_ext}' is not allowed. Accepted: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
-                )
+    created_problem = course_service.add_practice_problem_file(
+        user_id=user_id,
+        course_id=course_id,
+        question_bytes=q_bytes,
+        question_filename=q_filename,
+        question_mime_type=q_file.content_type or "application/octet-stream",
+        answer_bytes=a_bytes,
+        answer_filename=a_filename,
+        answer_mime_type=a_mime,
+    )
 
-            a_bytes = a_file.file.read(_MAX_FILE_BYTES + 1)
-            if len(a_bytes) > _MAX_FILE_BYTES:
-                raise CourseServiceError(413, "FILE_TOO_LARGE", "Answer file must be 50 MB or smaller")
-            a_mime = a_file.content_type or "application/octet-stream"
+    # Keep practice viewer scoped to the latest upload session for this user.
+    session_material_store.clear_materials(user_id)
 
-        course_service.add_practice_problem_file(
-            user_id=user_id,
-            course_id=course_id,
-            question_bytes=q_bytes,
-            question_filename=q_filename,
-            question_mime_type=q_file.content_type or "application/octet-stream",
-            answer_bytes=a_bytes,
-            answer_filename=a_filename,
-            answer_mime_type=a_mime,
+    question_url = created_problem.get("question")
+    if question_url:
+        session_material_store.add_material(
+            user_id,
+            CourseMaterial(
+                id=f"{created_problem.get('id', q_filename)}-question",
+                course_id=course_id,
+                user_id=user_id,
+                is_text=False,
+                filename=q_filename,
+                mime_type=q_file.content_type or "application/octet-stream",
+                storage_url=question_url,
+                text_material=None,
+                created_at=created_problem.get("created_at"),
+            ),
         )
-        created_count += 1
+
+    answer_url = created_problem.get("answer")
+    if answer_url:
+        session_material_store.add_material(
+            user_id,
+            CourseMaterial(
+                id=f"{created_problem.get('id', a_filename or 'answer')}-answer",
+                course_id=course_id,
+                user_id=user_id,
+                is_text=False,
+                filename=a_filename or "answer_upload",
+                mime_type=a_mime or "application/octet-stream",
+                storage_url=answer_url,
+                text_material=None,
+                created_at=created_problem.get("created_at"),
+            ),
+        )
 
     return MessageResponse(
         success=True,
-        message=f"Uploaded {created_count} practice problem(s)",
-        data=MessageData(action="practice_past_problems_uploaded"),
+        message="Uploaded 1 practice problem",
+        data=MessageData(action="practice_past_problems_uploaded", problem_id=created_problem.get("id")),
     )
