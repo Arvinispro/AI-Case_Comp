@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.dependencies import get_course_service, get_current_user_id
+from app.dependencies import get_course_service, get_current_user_id, get_session_material_store
 from app.exceptions import CourseServiceError
 from app.models import (
 	ConfirmUploadRequest,
@@ -18,6 +18,7 @@ from app.models import (
 	PresignResponse,
 )
 from app.services.course_service import ALLOWED_EXTENSIONS, CourseService
+from app.services.session_material_store import SessionMaterialStore
 
 page_router = APIRouter(tags=["study-pages"])
 router = APIRouter(prefix="/study", tags=["study"])
@@ -72,8 +73,10 @@ def upload_study_text_material(
 	payload: CourseMaterialCreate,
 	user_id: str = Depends(get_current_user_id),
 	course_service: CourseService = Depends(get_course_service),
+	session_material_store: SessionMaterialStore = Depends(get_session_material_store),
 ) -> CourseMaterialResponse:
 	data = course_service.add_text_material(user_id, course_id, payload)
+	session_material_store.add_material(user_id, data)
 	return CourseMaterialResponse(success=True, message="Study text material uploaded", data=data)
 
 
@@ -87,6 +90,7 @@ def upload_study_file_material(
 	file: UploadFile = File(..., description="Study material upload"),
 	user_id: str = Depends(get_current_user_id),
 	course_service: CourseService = Depends(get_course_service),
+	session_material_store: SessionMaterialStore = Depends(get_session_material_store),
 ) -> CourseMaterialResponse:
 	filename = file.filename or "upload"
 	ext = os.path.splitext(filename)[1].lower()
@@ -103,6 +107,7 @@ def upload_study_file_material(
 
 	mime_type = file.content_type or "application/octet-stream"
 	data = course_service.add_study_file_material(user_id, course_id, file_bytes, filename, mime_type)
+	session_material_store.add_material(user_id, data)
 	return CourseMaterialResponse(success=True, message=f"'{filename}' uploaded successfully", data=data)
 
 
@@ -131,11 +136,13 @@ def confirm_study_file(
 	payload: ConfirmUploadRequest,
 	user_id: str = Depends(get_current_user_id),
 	course_service: CourseService = Depends(get_course_service),
+	session_material_store: SessionMaterialStore = Depends(get_session_material_store),
 ) -> CourseMaterialResponse:
 	"""Record a file that was already uploaded directly from the browser into the DB."""
 	data = course_service.confirm_study_upload(
 		user_id, course_id, payload.storage_path, payload.filename, payload.mime_type
 	)
+	session_material_store.add_material(user_id, data)
 	return CourseMaterialResponse(success=True, message=f"'{payload.filename}' recorded successfully", data=data)
 
 
@@ -147,3 +154,12 @@ def list_study_materials(
 ) -> CourseMaterialsResponse:
 	data = course_service.list_materials(user_id, course_id)
 	return CourseMaterialsResponse(success=True, message="Study materials retrieved", data=data)
+
+
+@router.get("/materials/session", response_model=CourseMaterialsResponse)
+def list_session_study_materials(
+	user_id: str = Depends(get_current_user_id),
+	session_material_store: SessionMaterialStore = Depends(get_session_material_store),
+) -> CourseMaterialsResponse:
+	data = session_material_store.list_materials(user_id)
+	return CourseMaterialsResponse(success=True, message="Session materials retrieved", data=data)

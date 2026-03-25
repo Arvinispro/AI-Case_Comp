@@ -3,9 +3,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.exceptions import AuthServiceError
 from app.services.auth_service import AuthService
+from app.services.session_material_store import SessionMaterialStore
 from app.services.supabase_client import get_default_client
 
 security_scheme = HTTPBearer(auto_error=False)
+_session_material_store = SessionMaterialStore()
 
 
 def get_auth_service() -> AuthService:
@@ -38,3 +40,7 @@ def get_current_user_id(token: str = Depends(get_bearer_token)) -> str:
 def get_course_service():
     from app.services.course_service import CourseService
     return CourseService()
+
+
+def get_session_material_store() -> SessionMaterialStore:
+    return _session_material_store
