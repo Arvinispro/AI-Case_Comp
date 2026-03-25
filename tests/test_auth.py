@@ -40,6 +40,18 @@ def test_sign_up_username_taken(client, credentials_factory):
     assert body["error"]["code"] == "USERNAME_ALREADY_EXISTS"
 
 
+def test_sign_up_invalid_password_format_returns_validation_error(client, credentials_factory):
+    credentials = credentials_factory()
+    credentials["password"] = "password123"
+    response = _sign_up(client, credentials)
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["success"] is False
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+    assert "password must include uppercase, lowercase, and a number" in body["message"]
+
+
 def test_sign_in_success(client, credentials_factory):
     credentials = credentials_factory()
     sign_up_response = _sign_up(client, credentials)

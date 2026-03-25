@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathQuest | Log In</title>
+    <link rel="stylesheet" href="login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="left-panel"></div>
+
+        <div class="right-panel">
+            <header>
+                <a href="../menu/menu.html" class="back-link">Back</a>
+            </header>
+
+            <main class="form-container">
+                <div class="welcome-header">
+                    <h1 class="welcome-text">Welcome</h1>
+                    <h1 class="welcome-text indent">Back !</h1>
+                </div>
+
+                <form id="login-form" novalidate>
+                    <div class="input-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="jane@example.com" required />
+                    </div>
+
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Your password" required />
+                    </div>
+
+                    <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+
+                    <button type="submit" class="login-btn">Log in</button>
+                </form>
+            </main>
+        </div>
+    </div>
+    <script>
+        const form = document.getElementById("login-form");
+        const statusEl = document.getElementById("form-status");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            statusEl.style.color = "#cc3333";
+            statusEl.textContent = "";
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+
+            if (!email || !password) {
+                statusEl.textContent = "Please fill in all fields.";
+                return;
+            }
+
+            statusEl.style.color = "#555";
+            statusEl.textContent = "Logging in…";
+
+            try {
+                const res = await fetch("/api/v1/auth/sign_in", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    statusEl.style.color = "#cc3333";
+                    statusEl.textContent = data.message || "Log in failed. Please try again.";
+                    return;
+                }
+
+                if (data.data?.access_token) {
+                    localStorage.setItem("auth_token", data.data.access_token);
+                }
+                if (data.data?.refresh_token) {
+                    localStorage.setItem("refresh_token", data.data.refresh_token);
+                }
+
+                statusEl.style.color = "#2a7a2a";
+                statusEl.textContent = "Logged in! Redirecting to your account…";
+                setTimeout(() => {
+                    window.location.href = "/account";
+                }, 800);
+            } catch {
+                statusEl.style.color = "#cc3333";
+                statusEl.textContent = "Network error. Is the server running at localhost:8000?";
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -9,3 +9,7 @@ class AppError(Exception):
 
 class AuthServiceError(AppError):
     pass
+
+
+class CourseServiceError(AppError):
+    pass

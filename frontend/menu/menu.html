@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MathQuest | Start</title>
+  <link rel="stylesheet" href="menu.css" />
+</head>
+
+<body>
+  <main class="menu-shell">
+    <section class="hero-card" aria-label="Welcome menu">
+      <p class="eyebrow">Level Up Your Math</p>
+      <h1 class="title">MathQuest</h1>
+      <p class="subtitle">
+        Choose how you want to begin. You can create an account or log in to continue your progress.
+      </p>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="sign-up-btn" type="button">Sign Up</button>
+        <button class="btn btn-secondary" id="log-in-btn" type="button">Log In</button>
+      </div>
+
+      <p class="status" id="menu-status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("menu-status");
+    const signUpBtn = document.getElementById("sign-up-btn");
+    const logInBtn = document.getElementById("log-in-btn");
+
+    signUpBtn.addEventListener("click", () => {
+      window.location.href = "../signup/signup.html";
+    });
+
+    logInBtn.addEventListener("click", () => {
+      window.location.href = "../signin/login.html";
+    });
+  </script>
+</body>
+
+</html>

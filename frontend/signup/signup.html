@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathQuest | Sign Up</title>
+  <link rel="stylesheet" href="signup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&family=Jim+Nightshade&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div class="container">
+    <div class="left-panel"></div>
+
+    <div class="right-panel">
+      <header>
+        <a href="../menu/menu.html" class="back-link">Back</a>
+      </header>
+
+      <main class="form-container">
+        <h1 class="welcome-text">Welcome!</h1>
+
+        <form id="signup-form" novalidate>
+          <div class="name-row">
+            <div class="input-group">
+              <label for="first-name">First name</label>
+              <input type="text" id="first-name" name="first_name" placeholder="Jane" required />
+            </div>
+            <div class="input-group">
+              <label for="last-name">Last name</label>
+              <input type="text" id="last-name" name="last_name" placeholder="Doe" required />
+            </div>
+          </div>
+
+          <div class="input-group full-width">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="jane@example.com" required />
+          </div>
+
+          <div class="input-group full-width">
+            <label for="username">User name</label>
+            <input type="text" id="username" name="username" placeholder="jane_doe" required />
+          </div>
+
+          <div class="input-group full-width">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Min 8 chars, upper, lower &amp; number"
+              required minlength="8" />
+          </div>
+
+          <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+
+          <button type="submit" class="register-btn">Register</button>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("signup-form");
+    const statusEl = document.getElementById("form-status");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusEl.style.color = "#cc3333";
+      statusEl.textContent = "";
+
+      const firstName = document.getElementById("first-name").value.trim();
+      const lastName = document.getElementById("last-name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!firstName || !lastName || !email || !username || !password) {
+        statusEl.textContent = "Please fill in all fields.";
+        return;
+      }
+      if (password.length < 8) {
+        statusEl.textContent = "Password must be at least 8 characters.";
+        return;
+      }
+
+      statusEl.style.color = "#555";
+      statusEl.textContent = "Creating your account…";
+
+      try {
+        const res = await fetch("/api/v1/auth/sign_up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, username }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          statusEl.style.color = "#cc3333";
+          statusEl.textContent = data.message || "Sign up failed. Please try again.";
+          return;
+        }
+
+        if (data.data?.access_token) {
+          localStorage.setItem("auth_token", data.data.access_token);
+        }
+        if (data.data?.refresh_token) {
+          localStorage.setItem("refresh_token", data.data.refresh_token);
+        }
+
+        statusEl.style.color = "#2a7a2a";
+        statusEl.textContent = "Account created! Redirecting to your account…";
+        setTimeout(() => {
+          window.location.href = "/account";
+        }, 1000);
+      } catch {
+        statusEl.style.color = "#cc3333";
+        statusEl.textContent = "Network error. Is the server running at localhost:8000?";
+      }
+    });
+  </script>
+</body>
+
+</html>

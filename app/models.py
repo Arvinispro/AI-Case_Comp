@@ -12,6 +12,8 @@ class UserProfile(BaseModel):
     username: str | None = None
     xp: int | None = None
     level: int | None = None
+    points: int | None = None
+    profile_pic: str | None = None
     learning_type: str | None = None
     created_at: str | None = None
 
@@ -34,6 +36,18 @@ class UserResponse(BaseModel):
     success: bool = True
     message: str
     data: UserProfile | None = None
+    error: ErrorDetail | None = None
+
+
+class LeaderboardUser(BaseModel):
+    username: str
+    level: int
+
+
+class LeaderboardResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: list[LeaderboardUser] = []
     error: ErrorDetail | None = None
 
 
@@ -76,5 +90,91 @@ class SignUpRequest(BaseModel):
 class SignInRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+# ── Courses ───────────────────────────────────────────────────────────────────
+
+class Course(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    details: str | None = None
+    created_at: str | None = None
+
+
+class CourseCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    details: str | None = Field(default=None, max_length=2000)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class CourseResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: Course | None = None
+    error: ErrorDetail | None = None
+
+
+class CoursesResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: list[Course] = []
+    error: ErrorDetail | None = None
+
+
+# ── Course materials ──────────────────────────────────────────────────────────
+
+class CourseMaterial(BaseModel):
+    id: str
+    course_id: str
+    user_id: str
+    is_text: bool
+    filename: str | None = None       # original upload name
+    mime_type: str | None = None      # detected content type
+    storage_url: str | None = None    # Supabase Storage public URL
+    text_material: str | None = None  # only for .txt/.md of short length
+    created_at: str | None = None
+
+
+class CourseMaterialCreate(BaseModel):
+    text_material: str = Field(min_length=1)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class CourseMaterialResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: CourseMaterial | None = None
+    error: ErrorDetail | None = None
+
+
+class CourseMaterialsResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: list[CourseMaterial] = []
+    error: ErrorDetail | None = None
+
+
+class PresignRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=500)
+    mime_type: str = Field(min_length=1, max_length=200)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class PresignResponse(BaseModel):
+    success: bool = True
+    storage_path: str
+    signed_url: str
+
+
+class ConfirmUploadRequest(BaseModel):
+    storage_path: str = Field(min_length=1, max_length=1000)
+    filename: str = Field(min_length=1, max_length=500)
+    mime_type: str = Field(min_length=1, max_length=200)
 
     model_config = ConfigDict(str_strip_whitespace=True)

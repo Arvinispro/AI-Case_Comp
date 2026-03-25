@@ -1,0 +1,114 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+/* Outer frame with the blue border from your image */
+.container {
+    display: flex;
+    width: 1000px;
+    height: 650px;
+    background-color: white;
+    border: 5px solid #33a1ff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+/* Left side gray block */
+.left-panel {
+    flex: 1;
+    background-color: #d3d3d3;
+}
+
+/* Right side white block */
+.right-panel {
+    flex: 1.2;
+    padding: 40px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    text-align: right;
+}
+
+.back-link {
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+    font-family: 'Almendra', serif;
+    font-size: 1.2rem;
+}
+
+.form-container {
+    margin-top: 20px;
+}
+
+.welcome-text {
+    font-family: 'Almendra', serif;
+    font-size: 4rem;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.name-row {
+    display: flex;
+    gap: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.input-group label {
+    font-family: 'Almendra', serif;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 1rem;
+}
+
+.input-group input {
+    background-color: #e0e0e0;
+    border: none;
+    height: 35px;
+    padding: 0 10px;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.register-btn {
+    align-self: center;
+    margin-top: 25px;
+    padding: 10px 40px;
+    background-color: #d3d3d3;
+    border: none;
+    font-family: 'Almendra', serif;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.register-btn:hover {
+    background-color: #c0c0c0;
+}

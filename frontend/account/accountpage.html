@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/frontend/account/accountpage.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <main class="main-content">
+            <div class="profile-card">
+                <!--Add in this for image later: <div class="avatar-box"> <img src="images/profile.png" alt="Profile picture"></div>-->
+                <div class="avatar-box" id="avatarBox"></div>
+
+                <div class="user-info">
+                    <div class="info-row name-row">
+                        <span class="info-label">Name</span>
+                        <span class="info-value" id="profileName">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Level</span>
+                        <span class="info-value" id="profileLevel">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Points</span>
+                        <span class="info-value" id="profilePoints">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-icon" id="menuIcon" aria-label="Open menu" role="button" tabindex="0">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <div class="dropdown-menu" id="menu">
+                <a href="/profile">Profile</a>
+                <a href="#">Settings</a>
+                <a href="#">Logout</a>
+            </div>
+
+            <div class="modes-container">
+                <div class="mode-item">
+                    <a href="/study" class="mode-box">Study</a>
+                    <p class="mode-text">
+                        Enter a focused learning mode where you can review materials, build knowledge,
+                        and move through your study journey at your own pace.
+                    </p>
+                </div>
+
+                <div class="mode-item">
+                    <a href="/practice" class="mode-box">Practice</a>
+                    <p class="mode-text">
+                        Test what you know with engaging challenges, strengthen your memory,
+                        and improve your skills through repeated practice.
+                    </p>
+                </div>
+            </div>
+        </main>
+
+        <aside class="ranking-sidebar">
+            <h2 class="ranking-title">Ranking</h2>
+
+            <div class="ranking-list" id="rankingList"></div>
+        </aside>
+    </div>
+
+    <script>
+        const menuIcon = document.getElementById("menuIcon");
+        const menu = document.getElementById("menu");
+        const profileName = document.getElementById("profileName");
+        const profileLevel = document.getElementById("profileLevel");
+        const profilePoints = document.getElementById("profilePoints");
+        const rankingList = document.getElementById("rankingList");
+        const avatarBox = document.getElementById("avatarBox");
+
+        function applyProfilePicture(url) {
+            if (!url) {
+                avatarBox.style.backgroundImage = "";
+                return;
+            }
+            avatarBox.style.backgroundImage = `url("${url}")`;
+        }
+
+        async function loadCurrentUserProfile() {
+            const token = localStorage.getItem("auth_token");
+            if (!token) {
+                profileName.textContent = "Guest";
+                profileLevel.textContent = "-";
+                profilePoints.textContent = "-";
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/v1/auth/current_user", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch profile: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const user = payload?.data || {};
+
+                profileName.textContent = user.username || "User";
+                profileLevel.textContent = user.level ?? "-";
+                profilePoints.textContent = user.points ?? "-";
+                applyProfilePicture(user.profile_pic || "");
+            } catch (error) {
+                console.error("Failed to load current user profile:", error);
+                profileName.textContent = "User";
+                profileLevel.textContent = "-";
+                profilePoints.textContent = "-";
+                applyProfilePicture("");
+            }
+        }
+
+
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch("/api/v1/auth/leaderboard", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch leaderboard: ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const leaderboard = payload?.data || [];
+
+                rankingList.innerHTML = "";
+                if (!leaderboard.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "rank-item";
+                    empty.innerHTML = '<span class="rank-name">No ranking data yet</span>';
+                    rankingList.appendChild(empty);
+                    return;
+                }
+
+                leaderboard.forEach((user, index) => {
+                    const item = document.createElement("div");
+                    item.className = "rank-item";
+                    item.innerHTML = `
+                        <span class="rank-number">${index + 1}</span>
+                        <span class="rank-name">${user.username}</span>
+                        <span class="rank-level">Lv. ${user.level ?? 0}</span>
+                    `;
+                    rankingList.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Failed to load leaderboard:", error);
+                rankingList.innerHTML = '<div class="rank-item"><span class="rank-name">Unable to load ranking</span></div>';
+            }
+        }
+
+        menuIcon.addEventListener("click", function () {
+            if (menu.style.display === "flex") {
+                menu.style.display = "none";
+            } else {
+                menu.style.display = "flex";
+            }
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!menuIcon.contains(e.target) && !menu.contains(e.target)) {
+                menu.style.display = "none";
+            }
+        });
+
+        loadCurrentUserProfile();
+        loadLeaderboard();
+    </script>
+</body>
+
+</html>
