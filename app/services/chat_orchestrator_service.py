@@ -1,6 +1,7 @@
 from app.services.course_service import CourseService
 from app.services.llm_service import LLMService
 from app.services.session_material_store import SessionMaterialStore
+from app.services.session_schedule_store import SessionScheduleStore
 
 
 class ChatOrchestratorService:
@@ -9,10 +10,12 @@ class ChatOrchestratorService:
         course_service: CourseService,
         llm_service: LLMService,
         session_material_store: SessionMaterialStore,
+        session_schedule_store: SessionScheduleStore,
     ) -> None:
         self.course_service = course_service
         self.llm_service = llm_service
         self.session_material_store = session_material_store
+        self.session_schedule_store = session_schedule_store
 
     @staticmethod
     def _pick_session_materials(session_materials, material_files: list[str] | None):
@@ -72,6 +75,8 @@ class ChatOrchestratorService:
     ) -> tuple[str, str | None]:
         question_url = None
         question_context = None
+        course_material_urls: list[str] = []
+        learning_preferences = self.course_service.get_user_learning_preferences(user_id)
         files_for_prompt = material_files or []
         resolved_course_id = course_id
 
@@ -97,6 +102,11 @@ class ChatOrchestratorService:
             candidate_materials = self._pick_session_materials(session_materials, material_files)
             if candidate_materials:
                 question_url = candidate_materials[0].storage_url
+                course_material_urls = [
+                    item.storage_url
+                    for item in candidate_materials[:max_context_files]
+                    if item.storage_url
+                ]
                 files_for_prompt = []
 
         conversation_history: list[dict[str, str]] = []
@@ -132,6 +142,8 @@ class ChatOrchestratorService:
         reply = self.llm_service.generate_practice_reply(
             user_message=user_message,
             material_files=files_for_prompt,
+            course_material_urls=course_material_urls,
+            learning_preferences=learning_preferences,
             question_context=question_context,
             question_url=question_url,
             conversation_history=conversation_history,
@@ -146,3 +158,59 @@ class ChatOrchestratorService:
             )
 
         return reply, resolved_course_id
+
+    def generate_study_schedule(
+        self,
+        user_id: str,
+        duration_minutes: int,
+        course_id: str | None,
+        material_files: list[str] | None = None,
+        max_context_files: int = 8,
+    ) -> dict:
+        learning_preferences = self.course_service.get_user_learning_preferences(user_id)
+
+        session_materials = self.session_material_store.list_materials(user_id)
+        selected_materials = self._pick_session_materials(session_materials, material_files)
+
+        materials_for_schedule: list[dict[str, str]] = []
+        material_urls_for_schedule: list[str] = []
+        for item in selected_materials[:max_context_files]:
+            filename = (item.filename or "").strip() or "Untitled material"
+            summary = ""
+
+            if item.text_material:
+                summary = (item.text_material or "").strip()
+            elif item.storage_url:
+                extracted = self.llm_service.extract_question_context(item.storage_url)
+                if extracted:
+                    summary = extracted.strip()
+
+            if len(summary) > 1800:
+                summary = summary[:1800]
+
+            materials_for_schedule.append(
+                {
+                    "filename": filename,
+                    "section_summary": summary,
+                }
+            )
+            if item.storage_url:
+                material_urls_for_schedule.append(item.storage_url)
+
+        schedule_items = self.llm_service.generate_study_schedule(
+            duration_minutes=duration_minutes,
+            learning_preferences=learning_preferences,
+            materials=materials_for_schedule,
+            material_urls=material_urls_for_schedule,
+        )
+
+        payload = {
+            "schedule_items": schedule_items,
+            "learning_preferences": learning_preferences,
+            "duration_minutes": duration_minutes,
+            "material_files": [m.get("filename") for m in materials_for_schedule if m.get("filename")],
+            "generated_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+            "course_id": course_id,
+        }
+        self.session_schedule_store.set_latest_schedule(user_id, payload)
+        return payload

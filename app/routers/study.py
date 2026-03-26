@@ -4,7 +4,13 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.dependencies import get_chat_orchestrator_service, get_course_service, get_current_user_id, get_session_material_store
+from app.dependencies import (
+	get_chat_orchestrator_service,
+	get_course_service,
+	get_current_user_id,
+	get_session_material_store,
+	get_session_schedule_store,
+)
 from app.exceptions import CourseServiceError
 from app.models import (
 	ConfirmUploadRequest,
@@ -19,10 +25,14 @@ from app.models import (
 	StudyChatData,
 	StudyChatRequest,
 	StudyChatResponse,
+	StudyScheduleData,
+	StudyScheduleRequest,
+	StudyScheduleResponse,
 )
 from app.services.course_service import ALLOWED_EXTENSIONS, CourseService
 from app.services.chat_orchestrator_service import ChatOrchestratorService
 from app.services.session_material_store import SessionMaterialStore
+from app.services.session_schedule_store import SessionScheduleStore
 
 page_router = APIRouter(tags=["study-pages"])
 router = APIRouter(prefix="/study", tags=["study"])
@@ -184,3 +194,37 @@ def study_chat(
 	)
 
 	return StudyChatResponse(success=True, message="Reply generated", data=StudyChatData(reply=reply))
+
+
+@router.post("/schedule/generate", response_model=StudyScheduleResponse)
+def generate_study_schedule(
+	payload: StudyScheduleRequest,
+	user_id: str = Depends(get_current_user_id),
+	chat_orchestrator: ChatOrchestratorService = Depends(get_chat_orchestrator_service),
+) -> StudyScheduleResponse:
+	data = chat_orchestrator.generate_study_schedule(
+		user_id=user_id,
+		duration_minutes=payload.duration_minutes,
+		course_id=payload.course_id,
+		material_files=payload.material_files,
+	)
+	return StudyScheduleResponse(
+		success=True,
+		message="Study schedule generated",
+		data=StudyScheduleData.model_validate(data),
+	)
+
+
+@router.get("/schedule/session", response_model=StudyScheduleResponse)
+def get_session_study_schedule(
+	user_id: str = Depends(get_current_user_id),
+	session_schedule_store: SessionScheduleStore = Depends(get_session_schedule_store),
+) -> StudyScheduleResponse:
+	data = session_schedule_store.get_latest_schedule(user_id)
+	if not data:
+		return StudyScheduleResponse(success=True, message="No study schedule in session", data=None)
+	return StudyScheduleResponse(
+		success=True,
+		message="Study schedule retrieved",
+		data=StudyScheduleData.model_validate(data),
+	)

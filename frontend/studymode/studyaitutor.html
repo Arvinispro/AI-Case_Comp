@@ -16,6 +16,7 @@
         <div class="time-fill"></div>
       </div>
       <div class="timer">00:00</div>
+      <button class="session-back-btn" id="sessionBackBtn" type="button">Back</button>
     </div>
 
     <div class="main-content">
@@ -49,11 +50,15 @@
     const chatMessages = document.getElementById("chatMessages");
     const chatInput = document.getElementById("chatInput");
     const sendBtn = document.getElementById("sendBtn");
+    const sessionBackBtn = document.getElementById("sessionBackBtn");
     const timerText = document.querySelector(".timer");
     const timerFill = document.querySelector(".time-fill");
     const SUMMARY_URL = "/frontend/summary/summary.html";
+    const ACCOUNT_URL = "/account";
     const SESSION_REWARD_KEY = "session_reward_summary";
     const ACTIVE_TIMER_KEY = "active_session_timer";
+    const STUDY_SCHEDULE_KEY = "study_session_schedule";
+    const PENDING_TIMER_KEY = "pending_timer_setup";
 
     let materials = [];
     let activeMaterialIndex = 0;
@@ -84,6 +89,22 @@
     function getStudyCourseId() {
       const session = getStudySession();
       return session?.courseId || null;
+    }
+
+    function formatScheduleForChat(scheduleData) {
+      const items = Array.isArray(scheduleData?.schedule_items) ? scheduleData.schedule_items : [];
+      if (!items.length) {
+        return null;
+      }
+
+      const lines = items.map((item, index) => {
+        const duration = Math.max(1, Number(item?.duration_minutes || 0));
+        const activityType = String(item?.activity_type || "work").toUpperCase();
+        const activity = String(item?.activity || "");
+        return `${index + 1}. ${duration} minutes — ${activityType}: ${activity}`;
+      });
+
+      return `Your study schedule is ready:\n${lines.join("\n")}`;
     }
 
     function formatDuration(totalSeconds) {
@@ -159,6 +180,22 @@
 
       tick();
       sessionTimerInterval = window.setInterval(tick, 1000);
+    }
+
+    function exitSessionWithoutReward() {
+      hasSessionEnded = true;
+      if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+      }
+
+      sessionStorage.removeItem("study_mode_session");
+      sessionStorage.removeItem(ACTIVE_TIMER_KEY);
+      sessionStorage.removeItem(SESSION_REWARD_KEY);
+      sessionStorage.removeItem(STUDY_SCHEDULE_KEY);
+      sessionStorage.removeItem(PENDING_TIMER_KEY);
+
+      window.location.href = ACCOUNT_URL;
     }
 
     function appendChatMessage(role, text) {
@@ -353,8 +390,44 @@
       }
     }
 
+    async function loadSessionSchedule() {
+      const token = getAuthToken();
+      if (!token) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/v1/study/schedule/session", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        const data = payload?.data || null;
+        if (!data || !Array.isArray(data.schedule_items) || data.schedule_items.length === 0) {
+          return;
+        }
+
+        sessionStorage.setItem(STUDY_SCHEDULE_KEY, JSON.stringify(data));
+        const message = formatScheduleForChat(data);
+        if (message) {
+          appendChatMessage("assistant", message);
+        }
+      } catch (_) {
+        // ignore schedule fetch failures
+      }
+    }
+
     async function init() {
       startSessionTimer();
+      await loadSessionSchedule();
       await loadSessionMaterials();
       renderMaterialTabs();
       renderMaterialViewer();
@@ -362,6 +435,7 @@
     }
 
     sendBtn.addEventListener("click", sendChatMessage);
+    sessionBackBtn.addEventListener("click", exitSessionWithoutReward);
     chatInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();

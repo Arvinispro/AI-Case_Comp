@@ -11,6 +11,7 @@ from app.exceptions import AppError
 from app.models import ErrorDetail
 from app.routers.accountpage import router as account_router
 from app.routers.auth import router as auth_router
+from app.routers.learning_preferences import router as learning_preferences_router
 from app.routers.practice import page_router as practice_page_router
 from app.routers.practice import router as practice_router
 from app.routers.study import page_router as study_page_router
@@ -35,6 +36,7 @@ def health() -> dict:
 
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(learning_preferences_router, prefix="/api/v1")
 app.include_router(study_router, prefix="/api/v1")
 app.include_router(practice_router, prefix="/api/v1")
 app.include_router(study_page_router)

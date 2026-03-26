@@ -18,6 +18,7 @@
         <div class="time-fill"></div>
       </div>
       <div class="timer">00:00</div>
+      <button class="session-back-btn" id="sessionBackBtn" type="button">Back</button>
     </div>
 
     <!-- Main content -->
@@ -60,11 +61,14 @@
     const chatMessages = document.getElementById("chatMessages");
     const chatInput = document.getElementById("chatInput");
     const sendBtn = document.getElementById("sendBtn");
+    const sessionBackBtn = document.getElementById("sessionBackBtn");
     const timerText = document.querySelector(".timer");
     const timerFill = document.querySelector(".time-fill");
     const SUMMARY_URL = "/frontend/summary/summary.html";
+    const ACCOUNT_URL = "/account";
     const SESSION_REWARD_KEY = "session_reward_summary";
     const ACTIVE_TIMER_KEY = "active_session_timer";
+    const PENDING_TIMER_KEY = "pending_timer_setup";
 
     let materials = [];
     let activeMaterialIndex = 0;
@@ -190,6 +194,21 @@
 
       tick();
       sessionTimerInterval = window.setInterval(tick, 1000);
+    }
+
+    function exitSessionWithoutReward() {
+      hasSessionEnded = true;
+      if (sessionTimerInterval) {
+        clearInterval(sessionTimerInterval);
+        sessionTimerInterval = null;
+      }
+
+      sessionStorage.removeItem("practice_mode_session");
+      sessionStorage.removeItem(ACTIVE_TIMER_KEY);
+      sessionStorage.removeItem(SESSION_REWARD_KEY);
+      sessionStorage.removeItem(PENDING_TIMER_KEY);
+
+      window.location.href = ACCOUNT_URL;
     }
 
     async function sendChatMessage() {
@@ -397,6 +416,7 @@
     }
 
     sendBtn.addEventListener("click", sendChatMessage);
+    sessionBackBtn.addEventListener("click", exitSessionWithoutReward);
     chatInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();

@@ -85,6 +85,37 @@
       timeDisplay.textContent = formatDuration(selectedSeconds);
     }
 
+    function getAuthToken() {
+      return localStorage.getItem("auth_token");
+    }
+
+    async function generateStudyScheduleIfNeeded(sessionData, timer) {
+      if ((pendingSetup?.mode || "").toLowerCase() !== "study") {
+        return;
+      }
+
+      const token = getAuthToken();
+      if (!token) {
+        return;
+      }
+
+      const durationMinutes = Math.max(1, Number(timer?.durationMinutes || Math.round((timer?.durationSeconds || 0) / 60)));
+      const materialFiles = Array.isArray(sessionData?.materialFiles) ? sessionData.materialFiles : [];
+
+      await fetch("/api/v1/study/schedule/generate", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          duration_minutes: durationMinutes,
+          material_files: materialFiles,
+          course_id: sessionData?.courseId || null
+        })
+      }).catch(() => null);
+    }
+
     function adjustSeconds(delta) {
       selectedSeconds = Math.min(MAX_SECONDS, Math.max(0, selectedSeconds + delta));
       updateDisplay();
@@ -112,7 +143,7 @@
       });
     });
 
-    startBtn.addEventListener("click", () => {
+    startBtn.addEventListener("click", async () => {
       if (!pendingSetup?.sessionKey || !pendingSetup?.nextUrl) {
         alert("Session setup not found. Please upload files again.");
         return;
@@ -139,6 +170,8 @@
         ...(pendingSetup.sessionData || {}),
         timer
       };
+
+      await generateStudyScheduleIfNeeded(sessionData, timer);
 
       sessionStorage.setItem(pendingSetup.sessionKey, JSON.stringify(sessionData));
       sessionStorage.setItem(ACTIVE_TIMER_KEY, JSON.stringify(timer));

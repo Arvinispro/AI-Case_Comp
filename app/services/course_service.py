@@ -663,6 +663,118 @@ class CourseService:
         )
         return [self._serialize_material(row) for row in (response.data or [])]
 
+    def list_user_learning_preference_rows(self, user_id: str) -> list[dict]:
+        response = (
+            self.client.table("learning_preferences")
+            .select("id, user_id, preference, created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return [row for row in (response.data or []) if isinstance(row, dict)]
+
+    def add_user_learning_preference(self, user_id: str, preference: str) -> dict:
+        cleaned = (preference or "").strip()
+        if not cleaned:
+            raise CourseServiceError(400, "INVALID_PREFERENCE", "Learning preference cannot be empty")
+
+        record = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "preference": cleaned,
+        }
+        try:
+            response = self.client.table("learning_preferences").insert(record).execute()
+        except Exception as exc:
+            raise CourseServiceError(500, "PREFERENCE_CREATE_FAILED", f"Failed to save learning preference: {exc}") from exc
+
+        data = response.data or []
+        if not data:
+            raise CourseServiceError(500, "PREFERENCE_CREATE_FAILED", "Learning preference creation returned no data")
+        created = data[0]
+        if not isinstance(created, dict):
+            raise CourseServiceError(500, "PREFERENCE_CREATE_FAILED", "Unexpected learning preference response payload")
+        return created
+
+    def get_user_learning_preferences(self, user_id: str) -> list[str]:
+        preferences: list[str] = []
+
+        def append_preference(value: str | None) -> None:
+            text = (value or "").strip()
+            if not text:
+                return
+            if any(existing.lower() == text.lower() for existing in preferences):
+                return
+            preferences.append(text)
+
+        # Pull all explicit learning preferences saved for this user.
+        pref_rows = self.list_user_learning_preference_rows(user_id)
+        for row in pref_rows:
+            append_preference(str(row.get("preference") or ""))
+
+        # Include profile learning_type as an additional preference when present.
+        profile_resp = (
+            self.client.table("users")
+            .select("id, learning_type")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        profile_rows = profile_resp.data or []
+        if profile_rows:
+            append_preference(profile_rows[0].get("learning_type"))
+
+        return preferences
+
+    def get_user_learning_preferences_detailed(self, user_id: str) -> list[dict]:
+        rows = self.list_user_learning_preference_rows(user_id)
+        items: list[dict] = []
+        seen: set[str] = set()
+
+        for row in rows:
+            preference = str(row.get("preference") or "").strip()
+            if not preference:
+                continue
+            key = preference.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(
+                {
+                    "id": str(row.get("id") or ""),
+                    "preference": preference,
+                    "created_at": row.get("created_at"),
+                    "source": "table",
+                }
+            )
+
+        profile_resp = (
+            self.client.table("users")
+            .select("id, learning_type")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        profile_rows = profile_resp.data or []
+        if profile_rows:
+            learning_type = str(profile_rows[0].get("learning_type") or "").strip()
+            key = learning_type.lower()
+            if learning_type and key not in seen:
+                items.append(
+                    {
+                        "id": f"profile:{user_id}",
+                        "preference": learning_type,
+                        "created_at": None,
+                        "source": "profile_learning_type",
+                    }
+                )
+
+        return items
+
+    def get_user_learning_preference(self, user_id: str) -> str | None:
+        preferences = self.get_user_learning_preferences(user_id)
+        return preferences[0] if preferences else None
+
     # ── helpers ───────────────────────────────────────────────────────────────
 
     def _assert_course_owner(self, user_id: str, course_id: str) -> None:

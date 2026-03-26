@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
@@ -236,3 +238,57 @@ class StudyChatResponse(BaseModel):
     message: str
     data: StudyChatData | None = None
     error: ErrorDetail | None = None
+
+
+class StudyScheduleRequest(BaseModel):
+    duration_minutes: int = Field(ge=1, le=720)
+    material_files: list[str] = Field(default_factory=list, max_length=50)
+    course_id: str | None = Field(default=None, max_length=100)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class StudyScheduleItem(BaseModel):
+    duration_minutes: int = Field(ge=1)
+    activity_type: Literal["work", "break", "quiz"]
+    activity: str = Field(min_length=1)
+
+
+class StudyScheduleData(BaseModel):
+    schedule_items: list[StudyScheduleItem] = Field(default_factory=list)
+    learning_preferences: list[str] = Field(default_factory=list)
+    duration_minutes: int
+    material_files: list[str] = Field(default_factory=list)
+    generated_at: str
+    course_id: str | None = None
+
+
+class StudyScheduleResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: StudyScheduleData | None = None
+    error: ErrorDetail | None = None
+
+
+class LearningPreferenceItem(BaseModel):
+    id: str
+    preference: str
+    created_at: str | None = None
+    source: Literal["table", "profile_learning_type"] = "table"
+
+
+class LearningPreferencesData(BaseModel):
+    preferences: list[LearningPreferenceItem] = Field(default_factory=list)
+
+
+class LearningPreferencesResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: LearningPreferencesData = Field(default_factory=LearningPreferencesData)
+    error: ErrorDetail | None = None
+
+
+class LearningPreferenceCreateRequest(BaseModel):
+    preference: str = Field(min_length=1, max_length=200)
+
+    model_config = ConfigDict(str_strip_whitespace=True)

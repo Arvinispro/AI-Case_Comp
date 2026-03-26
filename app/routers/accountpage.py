@@ -16,3 +16,8 @@ def account_page() -> FileResponse:
 @router.get("/profile", include_in_schema=False)
 def profile_page() -> FileResponse:
     return FileResponse(BASE_DIR / "frontend" / "account" / "profile.html")
+
+
+@router.get("/learning-preferences", include_in_schema=False)
+def learning_preferences_page() -> FileResponse:
+    return FileResponse(BASE_DIR / "frontend" / "account" / "learning_preferences.html")

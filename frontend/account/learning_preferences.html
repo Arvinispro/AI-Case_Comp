@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learning Preferences</title>
+  <link rel="stylesheet" href="/frontend/account/learning_preferences.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Almendra:wght@700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="page">
+    <div class="top-row">
+      <a class="back-link" href="/account">&larr; Back to account</a>
+      <h1>Learning preferences</h1>
+    </div>
+
+    <p class="subtitle">Add new preferences and review all preferences linked to your account.</p>
+
+    <div class="input-row">
+      <input id="prefInput" class="pref-input" type="text" placeholder="e.g. visual learner, active recall" maxlength="200" />
+      <button id="addBtn" class="add-btn" type="button">Add</button>
+    </div>
+
+    <p class="status" id="statusText"></p>
+
+    <div class="pref-list" id="prefList"></div>
+  </div>
+
+  <script>
+    const prefInput = document.getElementById("prefInput");
+    const addBtn = document.getElementById("addBtn");
+    const prefList = document.getElementById("prefList");
+    const statusText = document.getElementById("statusText");
+
+    function getToken() {
+      return localStorage.getItem("auth_token");
+    }
+
+    function setStatus(message) {
+      statusText.textContent = message || "";
+    }
+
+    function renderPreferences(items) {
+      prefList.innerHTML = "";
+
+      if (!Array.isArray(items) || items.length === 0) {
+        prefList.innerHTML = '<div class="pref-item"><span class="pref-text">No learning preferences yet.</span></div>';
+        return;
+      }
+
+      items.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "pref-item";
+
+        const text = document.createElement("span");
+        text.className = "pref-text";
+        text.textContent = item?.preference || "";
+
+        const source = document.createElement("span");
+        source.className = "pref-source";
+        source.textContent = item?.source === "profile_learning_type" ? "profile" : "table";
+
+        row.appendChild(text);
+        row.appendChild(source);
+        prefList.appendChild(row);
+      });
+    }
+
+    async function loadPreferences() {
+      const token = getToken();
+      if (!token) {
+        setStatus("Please sign in first.");
+        renderPreferences([]);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/v1/learning-preferences", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to load preferences");
+        }
+
+        const payload = await response.json();
+        const items = payload?.data?.preferences || [];
+        renderPreferences(items);
+        setStatus("");
+      } catch (_) {
+        setStatus("Unable to load preferences right now.");
+        renderPreferences([]);
+      }
+    }
+
+    async function addPreference() {
+      const token = getToken();
+      if (!token) {
+        setStatus("Please sign in first.");
+        return;
+      }
+
+      const preference = (prefInput.value || "").trim();
+      if (!preference) {
+        setStatus("Please enter a preference.");
+        return;
+      }
+
+      addBtn.disabled = true;
+      try {
+        const response = await fetch("/api/v1/learning-preferences", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ preference })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setStatus(payload?.message || "Failed to add preference.");
+          return;
+        }
+
+        prefInput.value = "";
+        setStatus("Preference added.");
+        renderPreferences(payload?.data?.preferences || []);
+      } catch (_) {
+        setStatus("Unable to add preference right now.");
+      } finally {
+        addBtn.disabled = false;
+      }
+    }
+
+    addBtn.addEventListener("click", addPreference);
+    prefInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addPreference();
+      }
+    });
+
+    loadPreferences();
+  </script>
+</body>
+
+</html>

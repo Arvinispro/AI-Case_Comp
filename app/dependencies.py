@@ -5,10 +5,12 @@ from app.exceptions import AuthServiceError
 from app.services.auth_service import AuthService
 from app.services.llm_service import LLMService
 from app.services.session_material_store import SessionMaterialStore
+from app.services.session_schedule_store import SessionScheduleStore
 from app.services.supabase_client import get_default_client
 
 security_scheme = HTTPBearer(auto_error=False)
 _session_material_store = SessionMaterialStore()
+_session_schedule_store = SessionScheduleStore()
 
 
 def get_auth_service() -> AuthService:
@@ -47,6 +49,10 @@ def get_session_material_store() -> SessionMaterialStore:
     return _session_material_store
 
 
+def get_session_schedule_store() -> SessionScheduleStore:
+    return _session_schedule_store
+
+
 def get_llm_service() -> LLMService:
     return LLMService()
 
@@ -55,6 +61,7 @@ def get_chat_orchestrator_service(
     course_service=Depends(get_course_service),
     llm_service=Depends(get_llm_service),
     session_material_store: SessionMaterialStore = Depends(get_session_material_store),
+    session_schedule_store: SessionScheduleStore = Depends(get_session_schedule_store),
 ):
     from app.services.chat_orchestrator_service import ChatOrchestratorService
 
@@ -62,4 +69,5 @@ def get_chat_orchestrator_service(
         course_service=course_service,
         llm_service=llm_service,
         session_material_store=session_material_store,
+        session_schedule_store=session_schedule_store,
     )
