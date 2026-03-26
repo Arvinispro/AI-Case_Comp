@@ -41,7 +41,7 @@
             <div class="dropdown-menu" id="menu">
                 <a href="/profile">Profile</a>
                 <a href="#">Settings</a>
-                <a href="#">Logout</a>
+                <a href="#" id="logoutLink">Logout</a>
             </div>
 
             <div class="modes-container">
@@ -85,6 +85,40 @@
         const profilePoints = document.getElementById("profilePoints");
         const rankingList = document.getElementById("rankingList");
         const avatarBox = document.getElementById("avatarBox");
+        const logoutLink = document.getElementById("logoutLink");
+
+        function clearClientSession() {
+            localStorage.removeItem("auth_token");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("username");
+
+            sessionStorage.removeItem("practice_mode_session");
+            sessionStorage.removeItem("study_mode_session");
+            sessionStorage.removeItem("active_session_timer");
+            sessionStorage.removeItem("pending_timer_setup");
+            sessionStorage.removeItem("session_reward_summary");
+        }
+
+        async function logOutUser() {
+            const token = localStorage.getItem("auth_token") || localStorage.getItem("access_token");
+
+            try {
+                if (token) {
+                    await fetch("/api/v1/auth/log_out", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                }
+            } catch (_) {
+                // Ignore network/logout API errors and still clear local session.
+            } finally {
+                clearClientSession();
+                window.location.href = "/frontend/menu/menu.html";
+            }
+        }
 
         function applyProfilePicture(url) {
             if (!url) {
@@ -186,6 +220,11 @@
             if (!menuIcon.contains(e.target) && !menu.contains(e.target)) {
                 menu.style.display = "none";
             }
+        });
+
+        logoutLink.addEventListener("click", function (event) {
+            event.preventDefault();
+            logOutUser();
         });
 
         loadCurrentUserProfile();
