@@ -221,6 +221,25 @@ class PracticeChatResponse(BaseModel):
     error: ErrorDetail | None = None
 
 
+class PracticeHintRequest(BaseModel):
+    material_files: list[str] = Field(default_factory=list, max_length=20)
+    problem_id: str | None = Field(default=None, max_length=100)
+    course_id: str | None = Field(default=None, max_length=100)
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+
+class PracticeHintData(BaseModel):
+    hint: str
+
+
+class PracticeHintResponse(BaseModel):
+    success: bool = True
+    message: str
+    data: PracticeHintData | None = None
+    error: ErrorDetail | None = None
+
+
 class StudyChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     material_files: list[str] = Field(default_factory=list, max_length=50)

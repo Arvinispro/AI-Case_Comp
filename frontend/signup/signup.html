@@ -64,7 +64,7 @@
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      statusEl.style.color = "#cc3333";
+      statusEl.style.color = "#000000";
       statusEl.textContent = "";
 
       const firstName = document.getElementById("first-name").value.trim();
@@ -82,7 +82,7 @@
         return;
       }
 
-      statusEl.style.color = "#555";
+      statusEl.style.color = "#000000";
       statusEl.textContent = "Creating your account…";
 
       try {
@@ -95,7 +95,7 @@
         const data = await res.json();
 
         if (!res.ok) {
-          statusEl.style.color = "#cc3333";
+          statusEl.style.color = "#000000";
           statusEl.textContent = data.message || "Sign up failed. Please try again.";
           return;
         }
@@ -107,13 +107,13 @@
           localStorage.setItem("refresh_token", data.data.refresh_token);
         }
 
-        statusEl.style.color = "#2a7a2a";
+        statusEl.style.color = "#000000";
         statusEl.textContent = "Account created! Redirecting to your account…";
         setTimeout(() => {
           window.location.href = "/account";
         }, 1000);
       } catch {
-        statusEl.style.color = "#cc3333";
+        statusEl.style.color = "#000000";
         statusEl.textContent = "Network error. Is the server running at localhost:8000?";
       }
     });
