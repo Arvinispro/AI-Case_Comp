@@ -45,6 +45,16 @@ class LLMService:
         return text[:max_chars] if len(text) > max_chars else text
 
     @staticmethod
+    def _limit_to_token_like_words(value: str, max_tokens: int) -> str:
+        text = (value or "").strip()
+        if not text:
+            return ""
+        chunks = text.split()
+        if len(chunks) <= max_tokens:
+            return text
+        return " ".join(chunks[:max_tokens]).strip()
+
+    @staticmethod
     def _detect_extension_from_url(url: str) -> str:
         path = urlparse(url).path.lower()
         if "." not in path:
@@ -690,3 +700,70 @@ class LLMService:
             return self._to_readable_math(str(reply))
 
         return "I could not generate a response right now. Please try again."
+
+    def generate_practice_hint(
+        self,
+        user_message: str,
+        learning_preferences: list[str] | None = None,
+        question_context: str | None = None,
+        conversation_history: list[dict[str, str]] | None = None,
+    ) -> str:
+        cleaned_preferences = [
+            str(item).strip()
+            for item in (learning_preferences or [])
+            if str(item).strip()
+        ]
+        preference_section = (
+            "\n".join([f"- {item}" for item in cleaned_preferences])
+            if cleaned_preferences
+            else "- No explicit preference provided"
+        )
+
+        history = conversation_history or []
+        recent_turns = history[-12:]
+        history_lines: list[str] = []
+        for item in recent_turns:
+            role = str(item.get("role", "")).strip().lower()
+            content = str(item.get("content", "")).strip()
+            if not content:
+                continue
+            label = "User" if role == "user" else "Tutor"
+            history_lines.append(f"{label}: {content}")
+        history_section = "\n".join(history_lines) if history_lines else "- No prior conversation found"
+
+        context_section = question_context or "No extracted question content available."
+
+        instruction = (
+            "You are a math practice tutor. Give one short guiding hint only, not the final solution.\n"
+            "Hint constraints:\n"
+            "- Maximum 50 tokens.\n"
+            "- One or two short sentences.\n"
+            "- Focus on the next step the learner should try.\n"
+            "- Do not reveal the full derivation or final answer.\n"
+            "- Keep wording simple and direct.\n\n"
+            "Learning preferences:\n"
+            f"{preference_section}\n\n"
+            "Recent conversation:\n"
+            f"{history_section}\n\n"
+            "Question context (best effort):\n"
+            f"{context_section}\n\n"
+            f"User message: {user_message}"
+        )
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=instruction,
+                config=genai_types.GenerateContentConfig(max_output_tokens=50),
+            )
+        except genai_errors.APIError as exc:
+            return self._friendly_llm_error(exc)
+        except Exception as exc:
+            return self._friendly_llm_error(exc)
+
+        hint = getattr(response, "text", None)
+        if hint and str(hint).strip():
+            clean_hint = self._to_readable_math(str(hint))
+            return self._limit_to_token_like_words(clean_hint, 50)
+
+        return "Try isolating what is asked, then compute one small step before moving on."

@@ -19,6 +19,9 @@ from app.models import (
     PracticeChatData,
     PracticeChatRequest,
     PracticeChatResponse,
+    PracticeHintData,
+    PracticeHintRequest,
+    PracticeHintResponse,
 )
 from app.services.course_service import ALLOWED_EXTENSIONS, CourseService
 from app.services.chat_orchestrator_service import ChatOrchestratorService
@@ -150,6 +153,23 @@ def practice_chat(
     )
 
     return PracticeChatResponse(success=True, message="Reply generated", data=PracticeChatData(reply=reply))
+
+
+@router.post("/hint", response_model=PracticeHintResponse)
+def practice_hint(
+    payload: PracticeHintRequest,
+    user_id: str = Depends(get_current_user_id),
+    chat_orchestrator: ChatOrchestratorService = Depends(get_chat_orchestrator_service),
+) -> PracticeHintResponse:
+    hint, _ = chat_orchestrator.generate_practice_hint(
+        user_id=user_id,
+        course_id=payload.course_id,
+        material_files=payload.material_files,
+        problem_id=payload.problem_id,
+        max_context_files=1,
+    )
+
+    return PracticeHintResponse(success=True, message="Hint generated", data=PracticeHintData(hint=hint))
 
 
 @router.get("/courses/{course_id}/materials/{material_id}/download")

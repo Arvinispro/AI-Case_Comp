@@ -5,34 +5,30 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #f0f0f0;
+    font-family: Georgia, serif;
+    min-height: 100dvh;
+    background: linear-gradient(145deg, #bcdb88 0%, #c1dc9b 100%);
 }
 
 .container {
     display: flex;
-    width: 1000px;
-    height: 650px;
-    background-color: white;
-    /* Removed the blue border from previous if you want it clean, 
-       add 'border: 5px solid #33a1ff;' back if needed */
+    width: 100vw;
+    min-height: 100dvh;
+    background-color: #ebdbc0;
 }
 
 .left-panel {
     flex: 1;
-    background-color: #d3d3d3;
+    background: radial-gradient(circle at top, rgba(235, 219, 192, 0.35), transparent 52%), linear-gradient(160deg, #c1dc9b 0%, #bcdb88 100%);
 }
 
 .right-panel {
     flex: 1.2;
-    padding: 40px 60px;
+    padding: clamp(24px, 4vw, 60px);
     position: relative;
     display: flex;
     flex-direction: column;
+    background: rgba(235, 219, 192, 0.92);
 }
 
 header {
@@ -41,7 +37,7 @@ header {
 
 .back-link {
     text-decoration: none;
-    color: black;
+    color: #000000;
     font-weight: bold;
     font-family: 'Almendra', serif;
     font-size: 1.5rem;
@@ -55,8 +51,9 @@ header {
 
 .welcome-text {
     font-family: 'Almendra', serif;
-    font-size: 5rem;
+    font-size: clamp(2.8rem, 6vw, 5rem);
     line-height: 1.1;
+    color: #000000;
 }
 
 /* Offset the "Back !" text slightly to match the image layout */
@@ -83,35 +80,60 @@ form {
     font-weight: bold;
     margin-bottom: 8px;
     font-size: 1.1rem;
+    color: #000000;
 }
 
 .input-group input {
-    background-color: #d3d3d3;
-    border: none;
-    height: 40px;
-    padding: 0 10px;
+    background-color: rgba(235, 219, 192, 0.95);
+    border: 1px solid rgba(124, 110, 98, 0.2);
+    border-radius: 14px;
+    height: 44px;
+    padding: 0 12px;
+    color: #000000;
 }
 
 .login-btn {
     align-self: center;
     margin-top: 60px;
     padding: 8px 50px;
-    background-color: #d3d3d3;
+    background-color: #e1bc8b;
     border: none;
+    border-radius: 999px;
     font-family: 'Almendra', serif;
     font-weight: bold;
     font-size: 1.2rem;
+    color: #000000;
     cursor: pointer;
+    box-shadow: 0 10px 22px rgba(124, 110, 98, 0.16);
 }
 
 .login-btn:hover {
-    background-color: #c0c0c0;
+    background-color: #e8c99e;
 }
 
 .form-status {
     font-family: 'Almendra', serif;
     font-size: 0.9rem;
-    color: #cc3333;
+    color: #000000;
     min-height: 1.2em;
     text-align: center;
+}
+
+@media (max-width: 900px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .left-panel {
+        min-height: 26vh;
+        flex: 0 0 auto;
+    }
+
+    .right-panel {
+        flex: 1;
+    }
+
+    .indent {
+        margin-left: 0;
+    }
 }

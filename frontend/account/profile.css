@@ -5,24 +5,23 @@
 }
 
 body {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #f0f0f0;
+  min-height: 100dvh;
+  background: linear-gradient(145deg, #bcdb88 0%, #c1dc9b 100%);
 }
 
 .profile-page {
   width: 100%;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 24px;
 }
 
 .profile-card {
-  width: 420px;
-  background: #d3d3d3;
-  border: 1px solid #9e9e9e;
+  width: min(94vw, 560px);
+  background: rgba(235, 219, 192, 0.95);
+  border: 1px solid rgba(124, 110, 98, 0.18);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -33,7 +32,7 @@ body {
 .profile-card h1 {
   font-family: 'Almendra', serif;
   font-size: 2rem;
-  color: #000;
+  color: #000000;
   text-align: center;
 }
 
@@ -42,11 +41,11 @@ body {
   height: 160px;
   margin: 0 auto;
   border-radius: 10px;
-  background-color: #9e9e9e;
+  background-color: #c1dc9b;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  border: 1px solid #8a8a8a;
+  border: 1px solid rgba(124, 110, 98, 0.18);
 }
 
 #profilePicInput {
@@ -56,11 +55,12 @@ body {
 #uploadBtn {
   height: 44px;
   border: none;
-  background: #bdbdbd;
-  color: #000;
+  background: #e1bc8b;
+  color: #000000;
   font-family: 'Almendra', serif;
   font-size: 1.15rem;
   cursor: pointer;
+  border-radius: 999px;
 }
 
 #uploadBtn:disabled {
@@ -70,14 +70,14 @@ body {
 
 #statusText {
   min-height: 20px;
-  color: #222;
+  color: #000000;
   font-size: 0.95rem;
 }
 
 .back-link {
   text-align: center;
   text-decoration: none;
-  color: #000;
+  color: #000000;
   font-family: 'Almendra', serif;
   font-size: 1.1rem;
 }

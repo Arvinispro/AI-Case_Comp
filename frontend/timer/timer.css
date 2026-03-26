@@ -5,27 +5,23 @@
 }
 
 body {
-
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  min-height: 100dvh;
   font-family: "Almendra", serif;
+  background: linear-gradient(145deg, #bcdb88 0%, #c1dc9b 100%);
 }
 
 .timer-screen {
-  width: 457px;
-  height: 808px;
-  margin-top: 10%;
-  background: #b3b3b3;
+  width: 100vw;
+  min-height: 100dvh;
+  background: #ebdbc0;
   overflow: hidden;
 }
 
 .top-section {
   position: relative;
   width: 100%;
-  height: 165px;
-  background: #d9d9d9;
+  height: clamp(140px, 20dvh, 190px);
+  background: #c1dc9b;
 }
 
 .back-btn {
@@ -33,31 +29,31 @@ body {
   top: 18px;
   right: 22px;
   text-decoration: none;
-  color: #000;
+  color: #000000;
   font-size: 22px;
   font-weight: 700;
 }
 
 .title {
   position: absolute;
-  left: 100px;
+  left: clamp(28px, 8vw, 100px);
   bottom: 34px;
-  font-size: 44px;
-  color: #000;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  color: #000000;
   font-weight: 700;
   line-height: 1;
 }
 
 .bottom-section {
   width: 100%;
-  height: calc(100% - 165px);
+  height: calc(100dvh - clamp(140px, 20dvh, 190px));
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .timer-control {
-  margin-top: 148px;
+  margin-top: clamp(70px, 12dvh, 148px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,8 +61,8 @@ body {
 }
 
 .time-display {
-  font-size: 64px;
-  color: #f5f5f5;
+  font-size: clamp(2.4rem, 9vw, 4rem);
+  color: #000000;
   font-weight: 700;
   line-height: 1;
   min-width: 170px;
@@ -84,17 +80,17 @@ body {
 .left-arrow {
   border-top: 28px solid transparent;
   border-bottom: 28px solid transparent;
-  border-right: 40px solid #9c9c9c;
+  border-right: 40px solid #e1bc8b;
 }
 
 .right-arrow {
   border-top: 28px solid transparent;
   border-bottom: 28px solid transparent;
-  border-left: 40px solid #9c9c9c;
+  border-left: 40px solid #e1bc8b;
 }
 
 .quick-add-row {
-  margin-top: 72px;
+  margin-top: clamp(36px, 9dvh, 72px);
   display: flex;
   justify-content: center;
   gap: 26px;
@@ -104,23 +100,23 @@ body {
 .quick-add-btn {
   background: transparent;
   border: none;
-  color: #f5f5f5;
+  color: #000000;
   font-family: "Almendra", serif;
-  font-size: 28px;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
   font-weight: 700;
   cursor: pointer;
 }
 
 .start-btn {
-  margin-top: 92px;
+  margin-top: clamp(42px, 10dvh, 92px);
   width: 192px;
   height: 53px;
-  background: #ececec;
+  background: #e1bc8b;
   border: none;
   font-family: "Almendra", serif;
-  font-size: 42px;
+  font-size: clamp(1.75rem, 5vw, 2.6rem);
   font-weight: 700;
-  color: #000;
+  color: #000000;
   cursor: pointer;
   display: flex;
   align-items: center;

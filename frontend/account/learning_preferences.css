@@ -5,20 +5,16 @@
 }
 
 body {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #efefef;
+  min-height: 100dvh;
+  background: linear-gradient(145deg, #bcdb88 0%, #c1dc9b 100%);
   font-family: Arial, sans-serif;
 }
 
 .page {
-  width: 900px;
-  min-height: 620px;
-  background: #d5d5d5;
-  padding: 28px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
+  width: 100vw;
+  min-height: 100dvh;
+  background: rgba(235, 219, 192, 0.94);
+  padding: clamp(20px, 4vw, 32px);
 }
 
 .top-row {
@@ -29,7 +25,7 @@ body {
 }
 
 .back-link {
-  color: #111;
+  color: #000000;
   text-decoration: none;
   font-weight: 700;
 }
@@ -37,12 +33,12 @@ body {
 h1 {
   font-family: 'Almendra', serif;
   font-size: 2rem;
-  color: #111;
+  color: #000000;
 }
 
 .subtitle {
   margin-bottom: 18px;
-  color: #333;
+  color: #000000;
 }
 
 .input-row {
@@ -53,34 +49,37 @@ h1 {
 
 .pref-input {
   flex: 1;
-  border: 1px solid #b9b9b9;
+  border: 1px solid rgba(124, 110, 98, 0.18);
   border-radius: 8px;
   padding: 12px;
   font-size: 16px;
+  background: rgba(255, 251, 244, 0.7);
+  color: #000000;
 }
 
 .add-btn {
-  border: 1px solid #9f9f9f;
+  border: 1px solid rgba(124, 110, 98, 0.18);
   border-radius: 8px;
-  background: #ececec;
+  background: #e1bc8b;
   padding: 0 16px;
   font-weight: 700;
   cursor: pointer;
+  color: #000000;
 }
 
 .status {
   min-height: 20px;
   margin-bottom: 14px;
-  color: #333;
+  color: #000000;
 }
 
 .pref-list {
-  background: #ececec;
-  border: 1px solid #bfbfbf;
+  background: rgba(255, 251, 244, 0.58);
+  border: 1px solid rgba(124, 110, 98, 0.16);
   border-radius: 10px;
   padding: 12px;
-  min-height: 360px;
-  max-height: 420px;
+  min-height: clamp(280px, 45dvh, 560px);
+  max-height: 65dvh;
   overflow-y: auto;
 }
 
@@ -88,7 +87,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 1px solid #d4d4d4;
+  border-bottom: 1px solid rgba(124, 110, 98, 0.12);
   padding: 10px 4px;
 }
 
@@ -97,11 +96,11 @@ h1 {
 }
 
 .pref-text {
-  color: #111;
+  color: #000000;
 }
 
 .pref-source {
-  color: #666;
+  color: #000000;
   font-size: 12px;
   white-space: nowrap;
 }

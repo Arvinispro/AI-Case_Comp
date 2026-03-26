@@ -159,6 +159,74 @@ class ChatOrchestratorService:
 
         return reply, resolved_course_id
 
+    def generate_practice_hint(
+        self,
+        user_id: str,
+        course_id: str | None,
+        material_files: list[str] | None = None,
+        problem_id: str | None = None,
+        max_context_files: int = 1,
+    ) -> tuple[str, str | None]:
+        question_url = None
+        question_context = None
+        resolved_course_id = course_id
+        learning_preferences = self.course_service.get_user_learning_preferences(user_id)
+
+        candidate_materials = []
+        if problem_id:
+            problem = self.course_service.get_practice_problem(user_id=user_id, problem_id=problem_id)
+            resolved_course_id = problem.get("course_id") or resolved_course_id
+            question_url = problem.get("question")
+        else:
+            session_materials = self.session_material_store.list_materials(user_id)
+            candidate_materials = self._pick_session_materials(session_materials, material_files)
+            if candidate_materials:
+                question_url = candidate_materials[0].storage_url
+
+        conversation_history: list[dict[str, str]] = []
+        if resolved_course_id:
+            conversation_history = self.course_service.get_course_llm_conversation(
+                user_id=user_id,
+                course_id=resolved_course_id,
+            )
+
+        latest_user_message = "Give me a hint."
+        for item in reversed(conversation_history):
+            if str(item.get("role", "")).strip().lower() == "user":
+                content = str(item.get("content", "")).strip()
+                if content:
+                    latest_user_message = content
+                    break
+
+        if question_url:
+            if not problem_id and candidate_materials and max_context_files > 1:
+                context_parts: list[str] = []
+                for material in candidate_materials[:max_context_files]:
+                    part = self.llm_service.extract_question_context(material.storage_url)
+                    if part:
+                        context_parts.append(part)
+                if context_parts:
+                    question_context = "\n\n".join(context_parts)[:18000]
+            else:
+                question_context = self.llm_service.extract_question_context(question_url)
+
+        hint = self.llm_service.generate_practice_hint(
+            user_message=latest_user_message,
+            learning_preferences=learning_preferences,
+            question_context=question_context,
+            conversation_history=conversation_history,
+        )
+
+        if resolved_course_id:
+            self.course_service.append_practice_llm_conversation(
+                user_id=user_id,
+                course_id=resolved_course_id,
+                user_message="[Hint request]",
+                ai_response=hint,
+            )
+
+        return hint, resolved_course_id
+
     def generate_study_schedule(
         self,
         user_id: str,

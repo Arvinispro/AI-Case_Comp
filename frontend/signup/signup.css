@@ -5,37 +5,34 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #f0f0f0;
+    font-family: Georgia, serif;
+    min-height: 100dvh;
+    background: linear-gradient(145deg, #bcdb88 0%, #c1dc9b 100%);
 }
 
 /* Outer frame with the blue border from your image */
 .container {
     display: flex;
-    width: 1000px;
-    height: 650px;
-    background-color: white;
-    border: 5px solid #33a1ff;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 100vw;
+    min-height: 100dvh;
+    background: #ebdbc0;
+    border: 0;
 }
 
 /* Left side gray block */
 .left-panel {
     flex: 1;
-    background-color: #d3d3d3;
+    background: radial-gradient(circle at top, rgba(235, 219, 192, 0.35), transparent 52%), linear-gradient(160deg, #c1dc9b 0%, #bcdb88 100%);
 }
 
 /* Right side white block */
 .right-panel {
     flex: 1.2;
-    padding: 40px;
+    padding: clamp(24px, 4vw, 48px);
     position: relative;
     display: flex;
     flex-direction: column;
+    background: rgba(235, 219, 192, 0.92);
 }
 
 header {
@@ -44,7 +41,7 @@ header {
 
 .back-link {
     text-decoration: none;
-    color: black;
+    color: #000000;
     font-weight: bold;
     font-family: 'Almendra', serif;
     font-size: 1.2rem;
@@ -56,9 +53,10 @@ header {
 
 .welcome-text {
     font-family: 'Almendra', serif;
-    font-size: 4rem;
+    font-size: clamp(2.6rem, 5vw, 4.4rem);
     margin-bottom: 30px;
     text-align: center;
+    color: #000000;
 }
 
 form {
@@ -83,13 +81,17 @@ form {
     font-weight: bold;
     margin-bottom: 5px;
     font-size: 1rem;
+    color: #000000;
 }
 
 .input-group input {
-    background-color: #e0e0e0;
-    border: none;
-    height: 35px;
-    padding: 0 10px;
+    background-color: rgba(235, 219, 192, 0.95);
+    border: 1px solid rgba(124, 110, 98, 0.2);
+    border-radius: 14px;
+    height: 42px;
+    padding: 0 12px;
+    color: #000000;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .full-width {
@@ -100,15 +102,39 @@ form {
     align-self: center;
     margin-top: 25px;
     padding: 10px 40px;
-    background-color: #d3d3d3;
+    background-color: #e1bc8b;
     border: none;
+    border-radius: 999px;
     font-family: 'Almendra', serif;
     font-weight: bold;
     font-size: 1.1rem;
+    color: #000000;
     cursor: pointer;
-    transition: background 0.3s;
+    box-shadow: 0 10px 22px rgba(124, 110, 98, 0.16);
+    transition: background 0.3s, transform 0.18s ease;
 }
 
 .register-btn:hover {
-    background-color: #c0c0c0;
+    background-color: #e8c99e;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .left-panel {
+        min-height: 26vh;
+        flex: 0 0 auto;
+    }
+
+    .right-panel {
+        flex: 1;
+    }
+
+    .name-row {
+        flex-direction: column;
+        gap: 12px;
+    }
 }
