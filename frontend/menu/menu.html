@@ -4,15 +4,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MathQuest | Start</title>
-  <link rel="stylesheet" href="menu.css" />
+  <title>SageStudy | Start</title>
+  <link rel="stylesheet" href="/frontend/menu/menu.css" />
 </head>
 
 <body>
   <main class="menu-shell">
     <section class="hero-card" aria-label="Welcome menu">
-      <p class="eyebrow">Level Up Your Math</p>
-      <h1 class="title">MathQuest</h1>
+      <p class="eyebrow">Level Up Your Learning</p>
+      <h1 class="title">SageStudy</h1>
       <p class="subtitle">
         Choose how you want to begin. You can create an account or log in to continue your progress.
       </p>
@@ -32,11 +32,11 @@
     const logInBtn = document.getElementById("log-in-btn");
 
     signUpBtn.addEventListener("click", () => {
-      window.location.href = "../signup/signup.html";
+      window.location.href = "/frontend/signup/signup.html";
     });
 
     logInBtn.addEventListener("click", () => {
-      window.location.href = "../signin/login.html";
+      window.location.href = "/frontend/signin/login.html";
     });
   </script>
 </body>
